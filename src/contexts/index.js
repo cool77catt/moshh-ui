@@ -1,0 +1,1 @@
+export { GlobalContext, GlobalContextType } from './GlobalContext';
