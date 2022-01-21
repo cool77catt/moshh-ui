@@ -1,13 +1,14 @@
 import React from 'react';
+import { LoginMethod, LoginInfo } from '../types';
+
 
 export type GlobalContextType = {
-  email: string
-  login?: (email: string) => void
+  loginInfo?: LoginInfo,
+  login?: (loginInfo: LoginInfo) => void
   logout?: () => void
 }
 
-const defaultValue = {
-  email: ''
-}
+export const defaultValue = {
+};
  
 export const GlobalContext = React.createContext<GlobalContextType>(defaultValue);

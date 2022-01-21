@@ -12,6 +12,8 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		6172F2D35A4C3AA820D92908 /* libPods-MoshhUI.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 6423831EA8574132BED9D8CC /* libPods-MoshhUI.a */; };
+		7605BFDD2798ED6300083178 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7605BFDC2798ED6300083178 /* GoogleService-Info.plist */; };
+		7605BFDE2798ED6300083178 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 7605BFDC2798ED6300083178 /* GoogleService-Info.plist */; };
 		7EF68E3733C33B6898317E18 /* libPods-MoshhUI-MoshhUITests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ABFE59519B596E51CEFDCCC0 /* libPods-MoshhUI-MoshhUITests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
@@ -39,6 +41,7 @@
 		1D0AE47A65C8663E3B452821 /* Pods-MoshhUI-MoshhUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoshhUI-MoshhUITests.release.xcconfig"; path = "Target Support Files/Pods-MoshhUI-MoshhUITests/Pods-MoshhUI-MoshhUITests.release.xcconfig"; sourceTree = "<group>"; };
 		6423831EA8574132BED9D8CC /* libPods-MoshhUI.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MoshhUI.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C97AB639B58BBB4B15BBE30 /* Pods-MoshhUI-MoshhUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoshhUI-MoshhUITests.debug.xcconfig"; path = "Target Support Files/Pods-MoshhUI-MoshhUITests/Pods-MoshhUI-MoshhUITests.debug.xcconfig"; sourceTree = "<group>"; };
+		7605BFDC2798ED6300083178 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MoshhUI/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ABFE59519B596E51CEFDCCC0 /* libPods-MoshhUI-MoshhUITests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MoshhUI-MoshhUITests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0A881CF5CF3F2B244570E2A /* Pods-MoshhUI.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MoshhUI.debug.xcconfig"; path = "Target Support Files/Pods-MoshhUI/Pods-MoshhUI.debug.xcconfig"; sourceTree = "<group>"; };
@@ -86,6 +89,7 @@
 		13B07FAE1A68108700A75B9A /* MoshhUI */ = {
 			isa = PBXGroup;
 			children = (
+				7605BFDC2798ED6300083178 /* GoogleService-Info.plist */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.m */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -145,7 +149,6 @@
 				6C97AB639B58BBB4B15BBE30 /* Pods-MoshhUI-MoshhUITests.debug.xcconfig */,
 				1D0AE47A65C8663E3B452821 /* Pods-MoshhUI-MoshhUITests.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -236,6 +239,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7605BFDE2798ED6300083178 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -245,6 +249,7 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				7605BFDD2798ED6300083178 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

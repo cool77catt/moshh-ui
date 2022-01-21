@@ -13,6 +13,7 @@ import { View, Text, SafeAreaView } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
 import { Provider as PaperProvider } from 'react-native-paper';
+import { LoginMethod, LoginInfo } from './types';
 import { 
   LoginScreen,
   SearchScreen,
@@ -22,10 +23,9 @@ import {
 } from './screens';
 import { GlobalContext, GlobalContextType } from './contexts';
 
-// TODO: Setup the theme/color scheme
-// TODO: login with Google
-// TODO: Add to app store
 
+// TODO: Setup the theme/color scheme
+// TODO: Add to app store
 
 
 
@@ -34,18 +34,17 @@ const Tab = createMaterialBottomTabNavigator();
 const App = () => {
 
   // Create the email state
-  let [email, setEmail] = useState<string>('');
+  let [loginInfo, setLoginInfo] = useState<LoginInfo>();
 
   // Setup the global context
   let globalContextValue: GlobalContextType = {
-    email,
-    login: (email: string) => setEmail(email),
-    logout: () => setEmail('')
+    loginInfo,
+    login: (loginInfo: LoginInfo) => setLoginInfo(loginInfo),
+    logout: () => setLoginInfo(undefined)
   }
 
-
   const renderSection = () => {
-    if (email === '') {
+    if (!loginInfo) {
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <LoginScreen />
