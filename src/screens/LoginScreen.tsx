@@ -28,16 +28,8 @@ const LoginScreen = () => {
 
   const globalContext = useContext<GlobalContextType>(GlobalContext);
 
-  useEffect(() => {
-    console.log("effect mounted");
-  }, [])
-
-  // Set function to perform the log in
-  // const performLogin = () => {
-  //   if (email) {
-  //     globalContext.login?.(email)
-  //   }
-  // }
+  const currentUser = GoogleSignin.getCurrentUser()
+  console.log(currentUser);
 
   const _performGoogleLogin = async () => {
     try {
@@ -80,7 +72,7 @@ const LoginScreen = () => {
       <View style={{ height: 5 }} />
       <Button mode='contained' onPress={performLogin} style={{width: 300}}>Login</Button> */}
       <GoogleSigninButton
-          size={GoogleSigninButton.Size.Standard}
+          size={GoogleSigninButton.Size.Wide}
           color={GoogleSigninButton.Color.Dark}
           onPress={_performGoogleLogin}
         />

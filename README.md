@@ -3,6 +3,7 @@
 
 * react-native-paper
 * react-navigation
+* react-native-nodemediaclient
 
 
 # To run on iOS

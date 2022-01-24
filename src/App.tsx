@@ -20,13 +20,43 @@ import {
   SavedScreen,
   FilterScreen,
   SettingsScreen,
+  HomeScreen,
+  RecordScreen,
 } from './screens';
 import { GlobalContext, GlobalContextType } from './contexts';
 
+// TODO: look into  react-native-nodemediaclient for streaming HLS
 
 // TODO: Setup the theme/color scheme
 // TODO: Add to app store
 
+
+
+function renderTestPane() {
+  return (
+
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{
+        flex: 1, justifyContent: 'center', alignItems: 'center', 
+        borderColor: 'white', borderWidth: 2 
+      }}>
+        <View style={{ 
+          flex: 1, position: 'absolute', height: '100%', width: '100%', 
+          justifyContent: 'center', alignItems: 'center', backgroundColor: 'red', 
+          borderColor: 'blue', borderWidth: 5 
+        }}>
+        </View>
+
+        <View style={{ 
+          flex: 1, position: 'absolute', height: '100%', width: '100%', 
+          justifyContent: 'center', alignItems: 'center', backgroundColor: 'blue', 
+          opacity: 0.5, borderColor: 'green', borderWidth: 5 
+        }}>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
 
 
 const Tab = createMaterialBottomTabNavigator();
@@ -43,7 +73,7 @@ const App = () => {
     logout: () => setLoginInfo(undefined)
   }
 
-  const renderSection = () => {
+  const renderMainComponent = () => {
     if (!loginInfo) {
       return (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -55,9 +85,11 @@ const App = () => {
         <PaperProvider>
           <NavigationContainer>
             <Tab.Navigator shifting={false}>
+              <Tab.Screen name="Home" component={HomeScreen} />
               <Tab.Screen name="Search" component={SearchScreen} />
+              <Tab.Screen name="Record" component={RecordScreen} />
               <Tab.Screen name="Saved" component={SavedScreen} />
-              <Tab.Screen name="Filter" component={FilterScreen} />
+              {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
               <Tab.Screen name="Settings" component={SettingsScreen} />
             </Tab.Navigator>
           </NavigationContainer>
@@ -69,19 +101,11 @@ const App = () => {
 
   return (
     <GlobalContext.Provider value={globalContextValue}>
-      {renderSection()}
-      {/* <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <LoginScreen />
-      </View> */}
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* {renderTestPane()} */}
+        {renderMainComponent()}
+      </SafeAreaView>
     </GlobalContext.Provider>
-    // <View
-    //   style={{
-    //     flex: 1,
-    //     justifyContent: "center",
-    //     alignItems: "center"
-    //   }}>
-    //   <Text style={{color: "white"}}>Hello, world!</Text>
-    // </View>
   );
 }
 

@@ -51,6 +51,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialIcons.ttf</string>
+		<string>MaterialCommunityIcons.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -66,5 +67,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Moshh requires access to your phone’s camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Moshh requires access to your phone’s Microphone.</string>
 </dict>
 </plist>
