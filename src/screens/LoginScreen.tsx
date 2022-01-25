@@ -6,7 +6,8 @@ import {
   GoogleSignin, 
   GoogleSigninButton, 
   statusCodes, 
-  NativeModuleError 
+  NativeModuleError ,
+  User
 } from '@react-native-google-signin/google-signin';
 import config from '../config';
 import { LoginMethod } from '../types';
@@ -28,19 +29,45 @@ const LoginScreen = () => {
 
   const globalContext = useContext<GlobalContextType>(GlobalContext);
 
-  const currentUser = GoogleSignin.getCurrentUser()
-  console.log(currentUser);
+  // useEffect(() => {
+  //   const getCurrentLogin = async () => {
+  //     const currentUser = await GoogleSignin.getCurrentUser();
+  //     return currentUser;
+  //   }
+
+  //   const currentUser = getCurrentLogin();
+
+  //   console.log(currentUser);
+  //   if (currentUser) {
+  
+  //   }
+  // }, []);
+
+  const _setGoogleSignInInfo = (userInfo: User) => {
+    console.log(`Hello ${userInfo.user.givenName} at ${userInfo.user.email}`)
+    globalContext.login?.({
+      email: userInfo.user.email,
+      name: userInfo.user.givenName,
+      loginMethod: LoginMethod.Google
+    })
+  }
 
   const _performGoogleLogin = async () => {
     try {
       await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      console.log(`Hello ${userInfo.user.givenName} at ${userInfo.user.email}`)
-      globalContext.login?.({
-        email: userInfo.user.email,
-        name: userInfo.user.givenName,
-        loginMethod: LoginMethod.Google
-      })
+      // Check if signed in
+      // const isSignedIn = await GoogleSignin.isSignedIn();
+      // console.log('what')
+      // if (isSignedIn) {
+      //   console.log('how')
+      //   const userInfo = await GoogleSignin.getCurrentUser();
+      //   console.log('why')
+      //   _setGoogleSignInInfo(userInfo!);
+      // } else {
+      //   console.log('who')
+        const userInfo = await GoogleSignin.signIn();
+        _setGoogleSignInInfo(userInfo);
+      // }
     } catch (error) {
       const typedError = error as NativeModuleError;
       // TODO address all these options

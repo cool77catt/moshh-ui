@@ -11,8 +11,8 @@
 import React, { useState } from 'react';
 import { View, Text, SafeAreaView } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
 import { Provider as PaperProvider } from 'react-native-paper';
+import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
 import { LoginMethod, LoginInfo } from './types';
 import { 
   LoginScreen,
@@ -84,13 +84,13 @@ const App = () => {
       return (
         <PaperProvider>
           <NavigationContainer>
-            <Tab.Navigator shifting={false}>
-              <Tab.Screen name="Home" component={HomeScreen} />
-              <Tab.Screen name="Search" component={SearchScreen} />
-              <Tab.Screen name="Record" component={RecordScreen} />
-              <Tab.Screen name="Saved" component={SavedScreen} />
+            <Tab.Navigator shifting={false} initialRouteName='Home' >
+              <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home', tabBarIcon: 'home' }} />
+              <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarIcon: 'magnify' }} />
+              <Tab.Screen name="Record" component={RecordScreen} options={{ tabBarIcon: 'plus-circle-outline' }} />
+              {/* <Tab.Screen name="Saved" component={SavedScreen} /> */}
               {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
-              <Tab.Screen name="Settings" component={SettingsScreen} />
+              <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: 'account-settings' }} />
             </Tab.Navigator>
           </NavigationContainer>
         </PaperProvider>

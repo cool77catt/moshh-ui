@@ -1,10 +1,9 @@
-import React, { useContext, useRef, useState, useEffect } from 'react';
+import React, { useContext, useRef, useState, useCallback } from 'react';
 import { Text, View, ViewStyle, Pressable } from 'react-native';
-import { GlobalContext } from '../contexts';
-// import Video from 'react-native-video';
-// import VideoPlayer from 'react-native-video-player';
 import {  NodePlayerView } from 'react-native-nodemediaclient';
 import { IconButton, Colors } from 'react-native-paper';
+import { useFocusEffect } from '@react-navigation/native';
+import { GlobalContext } from '../contexts';
 
 
 const HomeScreen = () => {
@@ -15,21 +14,30 @@ const HomeScreen = () => {
 
   const videoPath = require('../static/clips/clip1.mp4');
 
-  useEffect(() => {
-    console.log("component mounted");
-    return () => {
-      console.log("Component Unmounted");
-    }
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      // Component focused entered code
+      if (playState) {
+        playerRef.current?.start();
+      }
+
+      return () => {
+        // Component focus exited code
+        playerRef.current?.pause();
+      }
+    }, [])
+  );
 
   const toggleVideoState = () => {
-    if (playState) {
-      playerRef.current?.pause();
-    } else {
-      playerRef.current?.start();
-    }
     setPlayState(!playState);
   }
+
+  if (playState) {
+    playerRef.current?.start();
+  } else {
+    playerRef.current?.pause();
+  }
+
 
   const renderPlayButton = () => {
     if (!playState) {
