@@ -1,17 +1,66 @@
-import React, { useContext, useRef, useState, useCallback } from 'react';
+import React, { useContext, useRef, useState, useCallback, useEffect } from 'react';
 import { View, ViewStyle } from 'react-native';
 import { Text, IconButton, Colors } from 'react-native-paper';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import {  NodeCameraView } from 'react-native-nodemediaclient';
+import { VIDEO_DIRECTORY, VIDEO_EXTENSION } from '../constants';
 
+// TODO - after record is done, ask if want to save the file. If not, delete.  
+// TODO - If focus lost, delete
+// TODO - turn on flash
+// TODO - default to back camera
+// TODO - test recording from both front and back, and then both
+// TODO - hide the nav bar when active, have an X at the top left to leave the screen
+// TODO - auto determine video aspect ratio
+// TODO - add setting for video quality
+
+// Note, the following was pulled from source regarding certain settings
+// public static final int VIDEO_PPRESET_16X9_270 = 0;
+// public static final int VIDEO_PPRESET_16X9_360 = 1;
+// public static final int VIDEO_PPRESET_16X9_480 = 2;
+// public static final int VIDEO_PPRESET_16X9_540 = 3;
+// public static final int VIDEO_PPRESET_16X9_720 = 4;
+// public static final int VIDEO_PPRESET_16X9_1080 = 5;
+// public static final int VIDEO_PPRESET_4X3_270 = 10;
+// public static final int VIDEO_PPRESET_4X3_360 = 11;
+// public static final int VIDEO_PPRESET_4X3_480 = 12;
+// public static final int VIDEO_PPRESET_4X3_540 = 13;
+// public static final int VIDEO_PPRESET_4X3_720 = 14;
+// public static final int VIDEO_PPRESET_4X3_1080 = 15;
+// public static final int VIDEO_PPRESET_1X1_270 = 20;
+// public static final int VIDEO_PPRESET_1X1_360 = 21;
+// public static final int VIDEO_PPRESET_1X1_480 = 22;
+// public static final int VIDEO_PPRESET_1X1_540 = 23;
+// public static final int VIDEO_PPRESET_1X1_720 = 24;
+// public static final int VIDEO_PPRESET_1X1_1080 = 25;
+// public static final int AUDIO_PROFILE_LCAAC = 0;
+// public static final int AUDIO_PROFILE_HEAAC = 1;
+// public static final int VIDEO_PROFILE_BASELINE = 0;
+// public static final int VIDEO_PROFILE_MAIN = 1;
+// public static final int VIDEO_PROFILE_HIGH = 2;
+// public static final int CAMERA_BACK = 0;
+// public static final int CAMERA_FRONT = 1;
+
+// public static final int NM_PIXEL_BGRA = 1;
+// public static final int NM_PIXEL_RGBA = 2;
+
+// public static final int NM_LOGLEVEL_ERROR = 0;
+// public static final int NM_LOGLEVEL_INFO = 1;
+// public static final int NM_LOGLEVEL_DEBUG = 2;
+
+enum RecordAction {
+  Start,
+  Stop,
+  None,
+}
 
 const RecordScreen = ({navigation}: any) => {
 
-  // console.log(props);
   const cameraRef = useRef<NodeCameraView>();
   const [isRecording, setIsRecording] = useState(false);
   const [isFlashOn, setIsFlashOn] = useState(false);
-
+  const [recordPath, setRecordPath] = useState('');
+  const recordAction = useRef<RecordAction>(RecordAction.None);
 
   // Handle when screen focus changes
   useFocusEffect(
@@ -20,74 +69,113 @@ const RecordScreen = ({navigation}: any) => {
 
       return () => {
         // Component focus exited code
+        console.log('stop record');
+        cameraRef.current?.stop();
 
         // Turn off the recording if its running
-        cameraRef.current?.stop();
         setIsRecording(false);
 
         // Set if the flash is on
         setIsFlashOn(false);
-      }
-    }, [])
+      };
+    }, []),
   );
+
+  // Handle actions to the recorder AFTER its been rendered, as 
+  // that is required in order for the new filename to take effect
+  useEffect(() => {
+    // Perform camera action
+    switch (recordAction.current) {
+      case RecordAction.Start:
+        console.log('record', cameraRef.current?.props.outputUrl);
+        cameraRef.current?.start();
+        // setIsRecording(true);
+        break;
+      case RecordAction.Stop:
+        console.log('stop record');
+        cameraRef.current?.stop();
+        // setIsRecording(false);
+        break;
+    }
+    recordAction.current = RecordAction.None;
+  });
 
   // Handle Record Control
   const recordPressed = () => {
     if (!isRecording) {
+      // Set the filename
+      const now = new Date();
+      const breakdown = [
+        now.getFullYear(),
+        now.getMonth() + 1,
+        now.getDate(),
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        now.getMilliseconds()
+      ]
+      const filename = breakdown.join('_');
+      setRecordPath(VIDEO_DIRECTORY + '/' + filename + VIDEO_EXTENSION);
       // Start Recording
-      cameraRef.current?.start();
+      recordAction.current = RecordAction.Start;
     } else {
-      cameraRef.current?.stop();
+      recordAction.current = RecordAction.Stop;
     }
     setIsRecording(!isRecording);
-  }
+  };
 
   // Handle Flash Control
   const flashPressed = () => {
     setIsFlashOn(!isFlashOn);
-  }
+  };
   cameraRef.current?.flashEnable(isFlashOn);
 
   // Handle Camera Swap
   const swapPressed = () => {
     cameraRef.current?.switchCamera();
-  }
+  };
 
-
+  // Render Functions
   const renderRecordButton = () => {
     return (
-      <IconButton 
+      <IconButton
         icon={isRecording ? 'stop-circle-outline' : 'record-rec'}
-        size={100} 
-        color={Colors.red400} 
-        style={{flex: 1}} 
-        onPress={recordPressed} 
+        size={100}
+        color={Colors.red400}
+        style={{flex: 1}}
+        onPress={recordPressed}
       />
-    )
-  }
+    );
+  };
 
   const renderFlashButton = () => {
     return (
-      <IconButton 
+      <IconButton
         icon={isFlashOn ? 'flash-off' : 'flash-outline'}
-        size={40} 
-        color={Colors.black} 
-        style={{flex: 1}} 
-        onPress={flashPressed} 
+        size={40}
+        color={Colors.black}
+        style={{flex: 1}}
+        onPress={flashPressed}
       />
     );
-  }
+  };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
       <View style={stackedViewStyle}>
-        <NodeCameraView 
-          style={{ height: '100%', width: '100%' }}
+        <NodeCameraView
+          style={{height: '100%', width: '100%'}}
           ref={cameraRef}
-          // outputUrl = {"rtmp://192.168.0.10/live/stream"}
-          camera={{ cameraId: 1, cameraFrontMirror: true }}
-          audio={{ bitrate: 32000, profile: 1, samplerate: 44100 }}
-          video={{ preset: 12, bitrate: 400000, profile: 1, fps: 15, videoFrontMirror: false }}
+          outputUrl={recordPath}
+          camera={{cameraId: 0, cameraFrontMirror: true}}
+          audio={{bitrate: 32000, profile: 1, samplerate: 44100}}
+          video={{
+            preset: 12,
+            bitrate: 400000,
+            profile: 1,
+            fps: 30,
+            videoFrontMirror: false,
+          }}
           autopreview={true}
         />
       </View>
@@ -95,7 +183,13 @@ const RecordScreen = ({navigation}: any) => {
         <View style={buttonGroupStyle}>
           {renderFlashButton()}
           {renderRecordButton()}
-          <IconButton icon='autorenew' size={40} color={Colors.black} style={{flex: 1}} onPress={swapPressed} />
+          <IconButton
+            icon="autorenew"
+            size={40}
+            color={Colors.black}
+            style={{flex: 1}}
+            onPress={swapPressed}
+          />
         </View>
       </View>
     </View>

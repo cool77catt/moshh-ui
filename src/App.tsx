@@ -8,10 +8,15 @@
  * @format
  */
 
-import React, { useState } from 'react';
-import { View, Text, SafeAreaView } from 'react-native';
+import React, {useState} from 'react';
+import {View, SafeAreaView, Alert} from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { Provider as PaperProvider } from 'react-native-paper';
+import { 
+  Provider as PaperProvider,  
+  Text,
+  ActivityIndicator,
+  Colors,
+} from 'react-native-paper';
 import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
 import { LoginMethod, LoginInfo } from './types';
 import { 
@@ -23,6 +28,7 @@ import {
   HomeScreen,
   RecordScreen,
 } from './screens';
+import { VIDEO_DIRECTORY } from './constants';
 import { GlobalContext, GlobalContextType } from './contexts';
 
 // TODO: look into  react-native-nodemediaclient for streaming HLS
@@ -31,11 +37,64 @@ import { GlobalContext, GlobalContextType } from './contexts';
 // TODO: Add to app store
 
 
+import { ReadDirItem, StatResult } from 'react-native-fs';
+let RNFS = require('react-native-fs');
 
 function renderTestPane() {
+
+  const dirExists = (directory: string) => {
+    RNFS.stat(directory)
+      .then((res: StatResult) => {
+        console.log('dir exists', res.isDirectory());
+      })
+      .catch((err: Error) => {
+        console.log('Error dir exists', err.message);
+      });
+  }
+
+  const makeDirectory = (directory: string) => {
+    RNFS.mkdir(directory)
+      .then(() => {
+        console.log('directory created')
+      })
+      .catch((err: Error) => {
+        console.log('mkdir error', err.message);
+      });
+  }
+
+  // Note, to see types, go to node_modules/react-native-fs/FS.common.js
+  const readContents = (directory: string) => {
+    console.log('read dir', directory)
+    RNFS.readDir(directory)
+      .then((result: ReadDirItem[]) => {
+        console.log(`Got ${result.length} Results:`);
+        result.forEach(file => console.log(file.name));
+      })
+  }
+
+  const writeFile = () => {
+    const path = RNFS.DocumentDirectoryPath + '/test.txt';
+
+    // write the file
+    RNFS.writeFile(path, 'Hello Clarice', 'utf8')
+      .then(() => {
+        console.log('FILE WRITTEN!');
+      })
+      .catch((err: Error) => {
+        console.log(err.message);
+      }
+    );
+  }
+
+  // const videoDirectory = RNFS.DocumentDirectoryPath + '/vids';
+  // makeDirectory(videoDirectory);
+  // dirExists(videoDirectory);
+  // readContents(RNFS.DocumentDirectoryPath);
+  // writeFile();
+
   return (
 
-    <SafeAreaView style={{ flex: 1 }}>
+
       <View style={{
         flex: 1, justifyContent: 'center', alignItems: 'center', 
         borderColor: 'white', borderWidth: 2 
@@ -54,7 +113,6 @@ function renderTestPane() {
         }}>
         </View>
       </View>
-    </SafeAreaView>
   );
 }
 
@@ -62,21 +120,41 @@ function renderTestPane() {
 const Tab = createMaterialBottomTabNavigator();
 
 const App = () => {
-
-  // Create the email state
+  // Setup state variables
   let [loginInfo, setLoginInfo] = useState<LoginInfo>();
+  let [videoDirReady, setVideoDirReady] = useState<boolean>(false);
 
   // Setup the global context
   let globalContextValue: GlobalContextType = {
     loginInfo,
     login: (loginInfo: LoginInfo) => setLoginInfo(loginInfo),
     logout: () => setLoginInfo(undefined)
-  }
+  };
 
-  const renderMainComponent = () => {
-    if (!loginInfo) {
+  const loadResources = async () => {
+    // Setup the vids directory
+    RNFS.mkdir(VIDEO_DIRECTORY)
+      .then(() => setVideoDirReady(true))
+      .catch((err: Error) => {
+        Alert.alert('Error', `Error with video directory: ${err.message}`);
+      });
+  };
+
+  const renderLoadingScreen = () => {
+    return (
+      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <ActivityIndicator animating={true} size='large' />
+        <Text style={{color: 'white', fontSize: 24}}>Loading...</Text>
+      </View>
+    );
+  };
+
+  const renderMainComponent = (initResourcesReady: boolean) => {
+    if (!initResourcesReady) {
+      return renderLoadingScreen();
+    } else if (!loginInfo) {
       return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <LoginScreen />
         </View>
       );
@@ -85,12 +163,28 @@ const App = () => {
         <PaperProvider>
           <NavigationContainer>
             <Tab.Navigator shifting={false} initialRouteName='Home' >
-              <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Home', tabBarIcon: 'home' }} />
+              <Tab.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
+              />
               <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarIcon: 'magnify' }} />
-              <Tab.Screen name="Record" component={RecordScreen} options={{ tabBarIcon: 'plus-circle-outline' }} />
-              {/* <Tab.Screen name="Saved" component={SavedScreen} /> */}
+              <Tab.Screen
+                name="Record"
+                component={RecordScreen}
+                options={{tabBarIcon: 'plus-circle-outline'}}
+              />
+              <Tab.Screen
+                name="Saved"
+                component={SavedScreen}
+                options={{tabBarIcon: 'content-save'}}
+              />
               {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
-              <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarIcon: 'account-settings' }} />
+              <Tab.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{tabBarIcon: 'account-settings'}}
+              />
             </Tab.Navigator>
           </NavigationContainer>
         </PaperProvider>
@@ -98,12 +192,20 @@ const App = () => {
     }
   }
 
+  // Determine if initial resources are ready
+  const initResourcesReady = videoDirReady;
+
+
+  // Start loading the resources
+  if (!initResourcesReady) {
+    loadResources();
+  }
 
   return (
     <GlobalContext.Provider value={globalContextValue}>
       <SafeAreaView style={{ flex: 1 }}>
         {/* {renderTestPane()} */}
-        {renderMainComponent()}
+        {renderMainComponent(initResourcesReady)}
       </SafeAreaView>
     </GlobalContext.Provider>
   );

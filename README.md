@@ -4,6 +4,7 @@
 * react-native-paper
 * react-navigation
 * react-native-nodemediaclient
+* react-native-create-thumbnail
 
 
 # To run on iOS

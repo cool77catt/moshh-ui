@@ -15,7 +15,7 @@ import { LoginMethod } from '../types';
 
 // TODO use "GoogleSignin.signInSilently" https://github.com/react-native-google-signin/google-signin/blob/master/example/src/App.tsx
 // TODO use "GoogleSignin.getCurrentUser()"
-
+// TODO if logged in via google, make sure they have an account first.  If not, they need to sign up
 
 // Configure the Google Sign in
 GoogleSignin.configure({
