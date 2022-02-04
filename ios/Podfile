@@ -13,7 +13,6 @@ target 'MoshhUI' do
   )
 
   pod 'GoogleSignIn', '~> 6.0.2'
-  pod 'RNFS', :path => '../node_modules/react-native-fs'
 
   target 'MoshhUITests' do
     inherit! :complete

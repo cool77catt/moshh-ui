@@ -8,18 +8,28 @@
  * @format
  */
 
-import React, {useState} from 'react';
-import {View, SafeAreaView, Alert} from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { 
-  Provider as PaperProvider,  
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  SafeAreaView,
+  Alert,
+  StyleSheet,
+  StyleProp,
+  TextStyle,
+} from 'react-native';
+import {NavigationContainer} from '@react-navigation/native';
+import {
+  Provider as PaperProvider,
   Text,
   ActivityIndicator,
+  Avatar,
   Colors,
 } from 'react-native-paper';
-import { createMaterialBottomTabNavigator } from '@react-navigation/material-bottom-tabs';
-import { LoginMethod, LoginInfo } from './types';
-import { 
+import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
+import RNFS from 'react-native-fs';
+import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
+import {LoginMethodType, LoginInfo} from './types';
+import {
   LoginScreen,
   SearchScreen,
   SavedScreen,
@@ -28,108 +38,25 @@ import {
   HomeScreen,
   RecordScreen,
 } from './screens';
-import { VIDEO_DIRECTORY } from './constants';
-import { GlobalContext, GlobalContextType } from './contexts';
+import {MoshhIcon} from './components';
+import {VIDEO_DIRECTORY} from './constants';
+import {GlobalContext, GlobalContextType} from './contexts';
 
 // TODO: look into  react-native-nodemediaclient for streaming HLS
 
 // TODO: Setup the theme/color scheme
 // TODO: Add to app store
 
-
-import { ReadDirItem, StatResult } from 'react-native-fs';
-let RNFS = require('react-native-fs');
-
-function renderTestPane() {
-
-  const dirExists = (directory: string) => {
-    RNFS.stat(directory)
-      .then((res: StatResult) => {
-        console.log('dir exists', res.isDirectory());
-      })
-      .catch((err: Error) => {
-        console.log('Error dir exists', err.message);
-      });
-  }
-
-  const makeDirectory = (directory: string) => {
-    RNFS.mkdir(directory)
-      .then(() => {
-        console.log('directory created')
-      })
-      .catch((err: Error) => {
-        console.log('mkdir error', err.message);
-      });
-  }
-
-  // Note, to see types, go to node_modules/react-native-fs/FS.common.js
-  const readContents = (directory: string) => {
-    console.log('read dir', directory)
-    RNFS.readDir(directory)
-      .then((result: ReadDirItem[]) => {
-        console.log(`Got ${result.length} Results:`);
-        result.forEach(file => console.log(file.name));
-      })
-  }
-
-  const writeFile = () => {
-    const path = RNFS.DocumentDirectoryPath + '/test.txt';
-
-    // write the file
-    RNFS.writeFile(path, 'Hello Clarice', 'utf8')
-      .then(() => {
-        console.log('FILE WRITTEN!');
-      })
-      .catch((err: Error) => {
-        console.log(err.message);
-      }
-    );
-  }
-
-  // const videoDirectory = RNFS.DocumentDirectoryPath + '/vids';
-  // makeDirectory(videoDirectory);
-  // dirExists(videoDirectory);
-  // readContents(RNFS.DocumentDirectoryPath);
-  // writeFile();
-
-  return (
-
-
-      <View style={{
-        flex: 1, justifyContent: 'center', alignItems: 'center', 
-        borderColor: 'white', borderWidth: 2 
-      }}>
-        <View style={{ 
-          flex: 1, position: 'absolute', height: '100%', width: '100%', 
-          justifyContent: 'center', alignItems: 'center', backgroundColor: 'red', 
-          borderColor: 'blue', borderWidth: 5 
-        }}>
-        </View>
-
-        <View style={{ 
-          flex: 1, position: 'absolute', height: '100%', width: '100%', 
-          justifyContent: 'center', alignItems: 'center', backgroundColor: 'blue', 
-          opacity: 0.5, borderColor: 'green', borderWidth: 5 
-        }}>
-        </View>
-      </View>
-  );
-}
-
-
 const Tab = createMaterialBottomTabNavigator();
 
 const App = () => {
   // Setup state variables
-  let [loginInfo, setLoginInfo] = useState<LoginInfo>();
-  let [videoDirReady, setVideoDirReady] = useState<boolean>(false);
-
-  // Setup the global context
-  let globalContextValue: GlobalContextType = {
-    loginInfo,
-    login: (loginInfo: LoginInfo) => setLoginInfo(loginInfo),
-    logout: () => setLoginInfo(undefined)
-  };
+  const [currentUser, setCurrentUser] = useState<FirebaseAuthTypes.User | null>(
+    auth().currentUser,
+  );
+  // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
+  const [videoDirReady, setVideoDirReady] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState(true);
 
   const loadResources = async () => {
     // Setup the vids directory
@@ -140,10 +67,39 @@ const App = () => {
       });
   };
 
+  // Setup the initial connection with the firebase auth
+  useEffect(() => {
+    const subscriber = auth().onAuthStateChanged(user => {
+      if (user) {
+        setCurrentUser(user);
+      }
+      if (isConnecting) {
+        setIsConnecting(false);
+      }
+    });
+    return subscriber; // unsubscribe on unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const performLogout = () => {
+    auth()
+      .signOut()
+      .then(() => setCurrentUser(auth().currentUser))
+      .catch((err: Error) => {
+        Alert.alert('Error', `Error logging out: ${err.message}`);
+      });
+  };
+
+  // Setup the global context
+  const globalContextValue: GlobalContextType = {
+    signOutUser: performLogout,
+  };
+
   const renderLoadingScreen = () => {
     return (
       <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-        <ActivityIndicator animating={true} size='large' />
+        <MoshhIcon />
+        <ActivityIndicator animating={true} size="large" />
         <Text style={{color: 'white', fontSize: 24}}>Loading...</Text>
       </View>
     );
@@ -152,7 +108,7 @@ const App = () => {
   const renderMainComponent = (initResourcesReady: boolean) => {
     if (!initResourcesReady) {
       return renderLoadingScreen();
-    } else if (!loginInfo) {
+    } else if (!currentUser) {
       return (
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <LoginScreen />
@@ -160,41 +116,42 @@ const App = () => {
       );
     } else {
       return (
-        <PaperProvider>
-          <NavigationContainer>
-            <Tab.Navigator shifting={false} initialRouteName='Home' >
-              <Tab.Screen
-                name="Home"
-                component={HomeScreen}
-                options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
-              />
-              <Tab.Screen name="Search" component={SearchScreen} options={{ tabBarIcon: 'magnify' }} />
-              <Tab.Screen
-                name="Record"
-                component={RecordScreen}
-                options={{tabBarIcon: 'plus-circle-outline'}}
-              />
-              <Tab.Screen
-                name="Saved"
-                component={SavedScreen}
-                options={{tabBarIcon: 'content-save'}}
-              />
-              {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
-              <Tab.Screen
-                name="Settings"
-                component={SettingsScreen}
-                options={{tabBarIcon: 'account-settings'}}
-              />
-            </Tab.Navigator>
-          </NavigationContainer>
-        </PaperProvider>
+        <NavigationContainer>
+          <Tab.Navigator shifting={false} initialRouteName="Home">
+            <Tab.Screen
+              name="Home"
+              component={HomeScreen}
+              options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
+            />
+            <Tab.Screen
+              name="Search"
+              component={SearchScreen}
+              options={{tabBarIcon: 'magnify'}}
+            />
+            <Tab.Screen
+              name="Record"
+              component={RecordScreen}
+              options={{tabBarIcon: 'plus-circle-outline'}}
+            />
+            <Tab.Screen
+              name="Saved"
+              component={SavedScreen}
+              options={{tabBarIcon: 'content-save'}}
+            />
+            {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
+            <Tab.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{tabBarIcon: 'account-settings'}}
+            />
+          </Tab.Navigator>
+        </NavigationContainer>
       );
     }
-  }
+  };
 
   // Determine if initial resources are ready
-  const initResourcesReady = videoDirReady;
-
+  const initResourcesReady = videoDirReady && !isConnecting;
 
   // Start loading the resources
   if (!initResourcesReady) {
@@ -203,17 +160,17 @@ const App = () => {
 
   return (
     <GlobalContext.Provider value={globalContextValue}>
-      <SafeAreaView style={{ flex: 1 }}>
-        {/* {renderTestPane()} */}
-        {renderMainComponent(initResourcesReady)}
+      <SafeAreaView style={{flex: 1}}>
+        <PaperProvider>
+          {/* {renderTestPane()} */}
+          {renderMainComponent(initResourcesReady)}
+        </PaperProvider>
       </SafeAreaView>
     </GlobalContext.Provider>
   );
-}
+};
 
 export default App;
- 
-
 
 // import React from 'react';
 // import {

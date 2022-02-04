@@ -5,6 +5,9 @@
 * react-navigation
 * react-native-nodemediaclient
 * react-native-create-thumbnail
+* react-native-vision-camera
+
+Note: some require --legacy-peer-deps flag passed into "npm install"
 
 
 # To run on iOS

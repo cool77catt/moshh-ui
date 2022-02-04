@@ -1,14 +1,17 @@
 import React from 'react';
-import { LoginMethod, LoginInfo } from '../types';
-
+// import {FirebaseAuthTypes} from '@react-native-firebase/auth';
+// import { LoginMethodType, LoginInfo } from '../types';
 
 export type GlobalContextType = {
-  loginInfo?: LoginInfo,
-  login?: (loginInfo: LoginInfo) => void
-  logout?: () => void
-}
-
-export const defaultValue = {
+  signOutUser?: () => void;
+  // currentUser?: FirebaseAuthTypes.User | null;
+  // setCurrentUser?: (user: FirebaseAuthTypes.User | null) => void;
+  // loginInfo?: LoginInfo,
+  // login?: (loginInfo: LoginInfo) => void
+  // logout?: () => void
 };
- 
-export const GlobalContext = React.createContext<GlobalContextType>(defaultValue);
+
+export const defaultValue = {};
+
+export const GlobalContext =
+  React.createContext<GlobalContextType>(defaultValue);
