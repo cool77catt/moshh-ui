@@ -1,14 +1,10 @@
 import React from 'react';
-// import {FirebaseAuthTypes} from '@react-native-firebase/auth';
-// import { LoginMethodType, LoginInfo } from '../types';
+import {UserDbRecordType} from '../utils/firestoreDb';
 
 export type GlobalContextType = {
+  userInfo?: UserDbRecordType | null;
+  setUserInfo?: (record: UserDbRecordType) => void;
   signOutUser?: () => void;
-  // currentUser?: FirebaseAuthTypes.User | null;
-  // setCurrentUser?: (user: FirebaseAuthTypes.User | null) => void;
-  // loginInfo?: LoginInfo,
-  // login?: (loginInfo: LoginInfo) => void
-  // logout?: () => void
 };
 
 export const defaultValue = {};

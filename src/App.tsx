@@ -28,32 +28,36 @@ import {
 import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
 import RNFS from 'react-native-fs';
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
-import {LoginMethodType, LoginInfo} from './types';
+import firestore from '@react-native-firebase/firestore';
 import {
   LoginScreen,
   SearchScreen,
   SavedScreen,
   FilterScreen,
-  SettingsScreen,
+  ProfileScreen,
   HomeScreen,
   RecordScreen,
+  CreateUserScreen,
 } from './screens';
 import {MoshhIcon} from './components';
 import {VIDEO_DIRECTORY} from './constants';
 import {GlobalContext, GlobalContextType} from './contexts';
+import {UserDbRecordType, getUserInfo, setDefaultUserInfo} from './utils/firestoreDb';
 
 // TODO: look into  react-native-nodemediaclient for streaming HLS
 
 // TODO: Setup the theme/color scheme
 // TODO: Add to app store
 
+// TODO: test handle creation if there is no internet.  Cna you recreate a handle?
+
 const Tab = createMaterialBottomTabNavigator();
 
 const App = () => {
   // Setup state variables
-  const [currentUser, setCurrentUser] = useState<FirebaseAuthTypes.User | null>(
-    auth().currentUser,
-  );
+  const [currentUserInfo, setCurrentUserInfo] =
+    useState<UserDbRecordType | null>(null);
+  // const [userHandleValid, setUserHandleValid] = useState<boolean>(false);
   // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
   const [videoDirReady, setVideoDirReady] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -70,13 +74,39 @@ const App = () => {
   // Setup the initial connection with the firebase auth
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(user => {
-      if (user) {
-        setCurrentUser(user);
-      }
       if (isConnecting) {
+        // Ignore the first call, as it simplies means the registration/connection is done
         setIsConnecting(false);
       }
+
+      if (!user) {
+        setCurrentUserInfo(null);
+      } else if (!user.email) {
+        Alert.alert('Error', 'User has no email address...');
+        setCurrentUserInfo(null);
+      } else {
+        getUserInfo(user.uid)
+          .then((data: UserDbRecordType) => {
+            if (!data) {
+              setDefaultUserInfo(user.uid)
+                .then((defaultData: UserDbRecordType) => {
+                  setCurrentUserInfo(defaultData);
+                })
+                .catch(err =>
+                  console.log('Error setting default user data', err.message),
+                );
+            } else {
+              setCurrentUserInfo(data);
+            }
+          })
+          .catch(err => {
+            console.log(err.message);
+            Alert.alert('Error', `Error getting user info ${err.message}`);
+            setCurrentUserInfo(null);
+          });
+      }
     });
+
     return subscriber; // unsubscribe on unmount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -84,7 +114,7 @@ const App = () => {
   const performLogout = () => {
     auth()
       .signOut()
-      .then(() => setCurrentUser(auth().currentUser))
+      .then(() => setCurrentUserInfo(auth().currentUser))
       .catch((err: Error) => {
         Alert.alert('Error', `Error logging out: ${err.message}`);
       });
@@ -92,12 +122,14 @@ const App = () => {
 
   // Setup the global context
   const globalContextValue: GlobalContextType = {
+    userInfo: currentUserInfo,
+    setUserInfo: setCurrentUserInfo,
     signOutUser: performLogout,
   };
 
   const renderLoadingScreen = () => {
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+      <View style={styles.mainContainer}>
         <MoshhIcon />
         <ActivityIndicator animating={true} size="large" />
         <Text style={{color: 'white', fontSize: 24}}>Loading...</Text>
@@ -108,31 +140,37 @@ const App = () => {
   const renderMainComponent = (initResourcesReady: boolean) => {
     if (!initResourcesReady) {
       return renderLoadingScreen();
-    } else if (!currentUser) {
+    } else if (!auth().currentUser) {
       return (
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <View style={styles.mainContainer}>
           <LoginScreen />
+        </View>
+      );
+    } else if (!currentUserInfo || !currentUserInfo.handle) {
+      return (
+        <View style={styles.mainContainer}>
+          <CreateUserScreen />
         </View>
       );
     } else {
       return (
         <NavigationContainer>
           <Tab.Navigator shifting={false} initialRouteName="Home">
-            <Tab.Screen
+            {/* <Tab.Screen
               name="Home"
               component={HomeScreen}
               options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
-            />
+            /> */}
             <Tab.Screen
               name="Search"
               component={SearchScreen}
               options={{tabBarIcon: 'magnify'}}
             />
-            <Tab.Screen
+            {/* <Tab.Screen
               name="Record"
               component={RecordScreen}
               options={{tabBarIcon: 'plus-circle-outline'}}
-            />
+            /> */}
             <Tab.Screen
               name="Saved"
               component={SavedScreen}
@@ -140,8 +178,8 @@ const App = () => {
             />
             {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
             <Tab.Screen
-              name="Settings"
-              component={SettingsScreen}
+              name="Profile"
+              component={ProfileScreen}
               options={{tabBarIcon: 'account-settings'}}
             />
           </Tab.Navigator>
@@ -169,6 +207,14 @@ const App = () => {
     </GlobalContext.Provider>
   );
 };
+
+const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
 
 export default App;
 

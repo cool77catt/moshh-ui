@@ -4,13 +4,14 @@ import {Avatar} from 'react-native-paper';
 
 export type MoshhIconProps = {
   style?: ViewStyle | null;
+  size?: number;
 };
 
-const MoshhIcon = ({style}: MoshhIconProps) => {
+const MoshhIcon = ({style, size}: MoshhIconProps) => {
   return (
     <View style={style}>
       <Avatar.Text
-        size={128}
+        size={size ? size : 128}
         label="MOSHH"
         style={styles.moshhContainer}
         labelStyle={styles.moshhLabel}

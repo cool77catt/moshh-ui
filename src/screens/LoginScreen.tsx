@@ -37,28 +37,6 @@ const LoginScreen = () => {
   const [inputPassword, setInputPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // useEffect(() => {
-  //   const subscriber = auth().onAuthStateChanged(user => {
-  //     if (user) {
-  //       doneCallback?.(user);
-  //     }
-  //     if (isConnecting) {
-  //       setIsConnecting(false);
-  //     }
-  //   });
-  //   return subscriber; // unsubscribe on unmount
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, []);
-
-  // const _setGoogleSignInInfo = (userInfo: User) => {
-    // console.log(`Hello ${userInfo.user.givenName} at ${userInfo.user.email}`);
-    // globalContext.login?.({
-    //   email: userInfo.user.email,
-    //   name: userInfo.user.givenName,
-    //   loginMethod: LoginMethodType.Google
-    // });
-  // };
-
   const _performGoogleLogin = async () => {
     try {
       await GoogleSignin.hasPlayServices();
@@ -145,7 +123,7 @@ const LoginScreen = () => {
   };
 
   const renderSignUpOrInButton = () => {
-    const text = isNewUser ? 'Sign Up' : 'Sign In';
+    const text = isNewUser ? 'Create Account' : 'Sign In';
     return (
       <Button
         mode="contained"
@@ -189,7 +167,7 @@ const LoginScreen = () => {
   };
 
   const renderChangeActionButton = () => {
-    const text = isNewUser ? 'Sign In' : 'Sign Up';
+    const text = isNewUser ? 'Sign In' : 'Create Account';
     return (
       <Button style={{flex: 1}} onPress={() => setIsNewUser(!isNewUser)}>
         {text}
@@ -199,7 +177,7 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.mainContainer}>
-      <MoshhIcon style={styles.moshhIconView} />
+      <MoshhIcon size={104} style={styles.moshhIconView} />
       {renderActionLabel()}
       <Text style={styles.emailLabel}>Email</Text>
       <View style={styles.inputContainer}>
@@ -262,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   moshhIconView: {
-    margin: 24,
+    margin: 16,
     alignItems: 'center',
   },
   actionLabel: {
@@ -283,6 +261,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginTop: 8,
     marginBottom: 0,
+    justifyContent: 'center',
     height: 56,
   },
   button: {
