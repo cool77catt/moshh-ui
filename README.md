@@ -6,6 +6,7 @@
 * react-native-nodemediaclient
 * react-native-create-thumbnail
 * react-native-vision-camera
+* react-native-bootsplash
 
 Note: some require --legacy-peer-deps flag passed into "npm install"
 
@@ -15,7 +16,21 @@ Note: some require --legacy-peer-deps flag passed into "npm install"
 npx react-native run-ios
 
 
+# Splashscreen
 
+I followed https://github.com/zoontek/react-native-bootsplash to implement the splash screen
+
+# Disable Dark Mode
+
+Added the following to Info.plist
+'''
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+'''
+
+# Generating app icons
+
+https://appicon.co/ -> upload a 1024x1024 png, and this tool will generate all the necessary sizes.  Then just need to download, extract, and add into the necessary ios/android folders.
 
 # Helpful Links
 * https://medium.com/syntx-io/video-live-streaming-with-react-native-98a0f6354077

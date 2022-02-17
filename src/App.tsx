@@ -22,13 +22,12 @@ import {
   Provider as PaperProvider,
   Text,
   ActivityIndicator,
-  Avatar,
-  Colors,
+  DefaultTheme,
 } from 'react-native-paper';
 import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
 import RNFS from 'react-native-fs';
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
-import firestore from '@react-native-firebase/firestore';
+import RNBootSplash from 'react-native-bootsplash';
 import {
   LoginScreen,
   SearchScreen,
@@ -37,6 +36,7 @@ import {
   ProfileScreen,
   HomeScreen,
   RecordScreen,
+  VideoScreen,
   CreateUserScreen,
 } from './screens';
 import {MoshhIcon} from './components';
@@ -59,8 +59,17 @@ const App = () => {
     useState<UserDbRecordType | null>(null);
   // const [userHandleValid, setUserHandleValid] = useState<boolean>(false);
   // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
-  const [videoDirReady, setVideoDirReady] = useState<boolean>(false);
-  const [isConnecting, setIsConnecting] = useState(true);
+  const [videoDirReady, setVideoDirReady] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [resourcesLoaded, setResourcesLoaded] = useState(false);
+
+  const checkResourceStatus = () => {
+    const loadedStatus = isConnected && videoDirReady;
+    if (!resourcesLoaded && loadedStatus) {
+      RNBootSplash.hide({fade: true});
+      setResourcesLoaded(true);
+    }
+  };
 
   const loadResources = async () => {
     // Setup the vids directory
@@ -73,10 +82,13 @@ const App = () => {
 
   // Setup the initial connection with the firebase auth
   useEffect(() => {
+    // Load the resources
+    loadResources();
+
     const subscriber = auth().onAuthStateChanged(user => {
-      if (isConnecting) {
+      if (!isConnected) {
         // Ignore the first call, as it simplies means the registration/connection is done
-        setIsConnecting(false);
+        setIsConnected(true);
       }
 
       if (!user) {
@@ -114,7 +126,7 @@ const App = () => {
   const performLogout = () => {
     auth()
       .signOut()
-      .then(() => setCurrentUserInfo(auth().currentUser))
+      .then(() => setCurrentUserInfo(null))
       .catch((err: Error) => {
         Alert.alert('Error', `Error logging out: ${err.message}`);
       });
@@ -127,6 +139,9 @@ const App = () => {
     signOutUser: performLogout,
   };
 
+  // Check the status of the resources that need to be loaded
+  checkResourceStatus();
+
   const renderLoadingScreen = () => {
     return (
       <View style={styles.mainContainer}>
@@ -137,8 +152,8 @@ const App = () => {
     );
   };
 
-  const renderMainComponent = (initResourcesReady: boolean) => {
-    if (!initResourcesReady) {
+  const renderMainComponent = () => {
+    if (!resourcesLoaded) {
       return renderLoadingScreen();
     } else if (!auth().currentUser) {
       return (
@@ -163,6 +178,7 @@ const App = () => {
             /> */}
             <Tab.Screen
               name="Search"
+              // component={VideoScreen}
               component={SearchScreen}
               options={{tabBarIcon: 'magnify'}}
             />
@@ -188,20 +204,12 @@ const App = () => {
     }
   };
 
-  // Determine if initial resources are ready
-  const initResourcesReady = videoDirReady && !isConnecting;
-
-  // Start loading the resources
-  if (!initResourcesReady) {
-    loadResources();
-  }
-
   return (
     <GlobalContext.Provider value={globalContextValue}>
       <SafeAreaView style={{flex: 1}}>
-        <PaperProvider>
+        <PaperProvider theme={{...DefaultTheme, dark: false}}>
           {/* {renderTestPane()} */}
-          {renderMainComponent(initResourcesReady)}
+          {renderMainComponent()}
         </PaperProvider>
       </SafeAreaView>
     </GlobalContext.Provider>

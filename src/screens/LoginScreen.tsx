@@ -1,5 +1,12 @@
-import React, {useContext, useState, useEffect} from 'react';
-import {Alert, Text, View, StyleSheet} from 'react-native';
+import React, {useState} from 'react';
+import {
+  Alert,
+  Text,
+  View,
+  StyleSheet,
+  Keyboard,
+  TouchableWithoutFeedback,
+} from 'react-native';
 import {Button, TextInput, Divider} from 'react-native-paper';
 import {
   GoogleSignin,
@@ -176,59 +183,66 @@ const LoginScreen = () => {
   };
 
   return (
-    <View style={styles.mainContainer}>
-      <MoshhIcon size={104} style={styles.moshhIconView} />
-      {renderActionLabel()}
-      <Text style={styles.emailLabel}>Email</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={{flex: 1}}
-          value={inputEmail}
-          textContentType={'username'}
-          autoCapitalize={'none'}
-          onChangeText={text => setInputEmail(text)}
-        />
+    // TouchableWithoutFeedback wrapper required to dismiss the keyboard
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={styles.mainContainer}>
+        <MoshhIcon size={104} style={styles.moshhIconView} />
+        {renderActionLabel()}
+        <Text style={styles.emailLabel}>Email</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={{flex: 1}}
+            value={inputEmail}
+            textContentType={'username'}
+            autoCapitalize={'none'}
+            onChangeText={text => setInputEmail(text)}
+          />
+        </View>
+        <Text style={styles.emailLabel}>Password</Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={{flex: 1}}
+            value={inputPassword}
+            secureTextEntry={!showPassword}
+            textContentType={'password'}
+            right={
+              <TextInput.Icon
+                name="eye"
+                onPress={() => setShowPassword(!showPassword)}
+              />
+            }
+            onChangeText={text => setInputPassword(text)}
+          />
+        </View>
+        {renderForgotPasswordButton()}
+        {renderSignUpOrInButton()}
+        {renderSeparatorText()}
+        <View style={styles.socialButtonContainer}>
+          <Button
+            style={{...styles.socialButton, backgroundColor: '#EA4335'}}
+            labelStyle={styles.socialButtonLabel}
+            onPress={_performGoogleLogin}>
+            G
+          </Button>
+          <Button
+            style={{...styles.socialButton, backgroundColor: '#1DA1F2'}}
+            labelStyle={styles.socialButtonLabel}
+            onPress={() => console.log('Twitter login')}>
+            T
+          </Button>
+          <Button
+            style={{...styles.socialButton, backgroundColor: '#4585FB'}}
+            labelStyle={styles.socialButtonLabel}
+            onPress={() => console.log('Facebook login')}>
+            F
+          </Button>
+        </View>
+        <Divider style={{marginTop: 24, borderWidth: 1}} />
+        <View style={styles.optionsContainer}>
+          {renderChangeActionButton()}
+        </View>
       </View>
-      <Text style={styles.emailLabel}>Password</Text>
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={{flex: 1}}
-          value={inputPassword}
-          secureTextEntry={!showPassword}
-          textContentType={'password'}
-          right={
-            <TextInput.Icon
-              name="eye"
-              onPress={() => setShowPassword(!showPassword)}
-            />
-          }
-          onChangeText={text => setInputPassword(text)}
-        />
-      </View>
-      {renderForgotPasswordButton()}
-      {renderSignUpOrInButton()}
-      {renderSeparatorText()}
-      <Button
-        style={{backgroundColor: '#EA4335'}}
-        labelStyle={{color: 'white', fontWeight: 'bold'}}
-        onPress={_performGoogleLogin}>
-        Google
-      </Button>
-      <Button
-        style={{backgroundColor: '#1DA1F2', marginTop: 4}}
-        labelStyle={{color: 'white', fontWeight: 'bold'}}
-        onPress={() => console.log('Twitter login')}>
-        Twitter
-      </Button>
-      <Button
-        style={{backgroundColor: '#4585FB', marginTop: 4}}
-        labelStyle={{color: 'white', fontWeight: 'bold'}}
-        onPress={() => console.log('Facebook login')}>
-        Facebook
-      </Button>
-      <Divider style={{marginTop: 24, borderWidth: 1}} />
-      <View style={styles.optionsContainer}>{renderChangeActionButton()}</View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -288,6 +302,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'right',
     marginRight: 0,
+  },
+  socialButtonContainer: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  socialButton: {
+    flex: 1,
+    justifyContent: 'center',
+    aspectRatio: 1,
+    margin: 24,
+  },
+  socialButtonLabel: {
+    color: 'white',
+    fontSize: 40,
+    fontWeight: 'bold',
   },
 });
 

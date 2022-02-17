@@ -6,3 +6,4 @@ export {default as FilterScreen} from './FilterScreen';
 export {default as ProfileScreen} from './ProfileScreen';
 export {default as RecordScreen} from './RecordScreen';
 export {default as CreateUserScreen} from './CreateUserScreen';
+export {default as VideoScreen} from './VideoScreen';

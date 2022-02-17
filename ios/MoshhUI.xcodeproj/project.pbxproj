@@ -18,6 +18,7 @@
 		76834F9227A9C2670058BD55 /* TitanOne.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 76834F9027A9C2670058BD55 /* TitanOne.ttf */; };
 		76834F9327A9C36D0058BD55 /* TitanOne.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 76834F9027A9C2670058BD55 /* TitanOne.ttf */; };
 		76852D4B279F663C00244762 /* MaterialIcons.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 76852D49279F663C00244762 /* MaterialIcons.ttf */; };
+		76DEB97327B1F5E8002302C6 /* BootSplash.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 76DEB97227B1F5E8002302C6 /* BootSplash.storyboard */; };
 		7EF68E3733C33B6898317E18 /* libPods-MoshhUI-MoshhUITests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ABFE59519B596E51CEFDCCC0 /* libPods-MoshhUI-MoshhUITests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
@@ -59,6 +60,7 @@
 		7605BFDF279F615000083178 /* MaterialCommunityIcons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MaterialCommunityIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialCommunityIcons.ttf"; sourceTree = "<group>"; };
 		76834F9027A9C2670058BD55 /* TitanOne.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = TitanOne.ttf; sourceTree = "<group>"; };
 		76852D49279F663C00244762 /* MaterialIcons.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MaterialIcons.ttf; path = "../node_modules/react-native-vector-icons/Fonts/MaterialIcons.ttf"; sourceTree = "<group>"; };
+		76DEB97227B1F5E8002302C6 /* BootSplash.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = BootSplash.storyboard; path = MoshhUI/BootSplash.storyboard; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MoshhUI/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		94FE44E6D14D4A79AE662E0B /* FontAwesome5_Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = FontAwesome5_Regular.ttf; path = "../node_modules/react-native-vector-icons/Fonts/FontAwesome5_Regular.ttf"; sourceTree = "<group>"; };
 		A308BBB8F67E47D2A34BCEFE /* Fontisto.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Fontisto.ttf; path = "../node_modules/react-native-vector-icons/Fonts/Fontisto.ttf"; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 		13B07FAE1A68108700A75B9A /* MoshhUI */ = {
 			isa = PBXGroup;
 			children = (
+				76DEB97227B1F5E8002302C6 /* BootSplash.storyboard */,
 				76834F9027A9C2670058BD55 /* TitanOne.ttf */,
 				76852D49279F663C00244762 /* MaterialIcons.ttf */,
 				7605BFDF279F615000083178 /* MaterialCommunityIcons.ttf */,
@@ -297,6 +300,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				76DEB97327B1F5E8002302C6 /* BootSplash.storyboard in Resources */,
 				76834F9327A9C36D0058BD55 /* TitanOne.ttf in Resources */,
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
