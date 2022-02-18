@@ -1,7 +1,8 @@
 import React, {useState, useRef} from 'react';
 import {StyleSheet, View, ViewStyle, Pressable} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
-import {NodePlayerView} from 'react-native-nodemediaclient';
+// import {NodePlayerView} from 'react-native-nodemediaclient';
+import {default as RNVideoPlayer} from 'react-native-video-player';
 
 export type VideoPlayerPropsType = {
   videoUrl: string;
@@ -27,8 +28,21 @@ const VideoPlayer = (props: VideoPlayerPropsType) => {
 
   return (
     <View style={styles.mainContainer}>
-      <View style={styles.stackedViewStyle}>
-        <NodePlayerView
+      {/* <View style={styles.stackedViewStyle}> */}
+      <View
+        style={{
+          flex: 1,
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+        <RNVideoPlayer
+          video={{uri: props.videoUrl}}
+          // videoWidth={1600}
+          // videoHeight={900}
+          style={{aspectRatio: 16 / 9, height: undefined, width: '100%'}}
+        />
+        {/* <NodePlayerView
           style={styles.playerStyle}
           ref={playerRef}
           inputUrl={props.videoUrl}
@@ -36,13 +50,13 @@ const VideoPlayer = (props: VideoPlayerPropsType) => {
           bufferTime={300}
           maxBufferTime={1000}
           autoplay={true}
-        />
+        /> */}
       </View>
-      <Pressable
+      {/* <Pressable
         style={styles.pressableStyle}
         onPress={() => setPlayState(!playState)}>
         {renderPlayButton()}
-      </Pressable>
+      </Pressable> */}
     </View>
   );
 };
@@ -61,6 +75,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    height: '100%',
+    width: '100%',
   },
   stackedViewStyle: {...stackedViewStyle},
   pressableStyle: {

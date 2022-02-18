@@ -20,11 +20,8 @@ import config from '../config';
 import {LoginMethodType} from '../types';
 import {GlobalContext, GlobalContextType} from '../contexts/GlobalContext';
 
-// TODO use "GoogleSignin.signInSilently" https://github.com/react-native-google-signin/google-signin/blob/master/example/src/App.tsx
-// TODO use "GoogleSignin.getCurrentUser()"
-// TODO if logged in via google, make sure they have an account first.  If not, they need to sign up
-// TODO forgot password
-// TODO Sign Up
+// TODO: Add caption:  "New to Moshh? CREATE AN ACCOUNT" where "Create an Account is button"
+// TODO: Add caption:  "Already have an account? SIGN IN" where "Sing In" is a button
 
 export type LoginScreenProps = {
   doneCallback?: (user: FirebaseAuthTypes.User) => void;
