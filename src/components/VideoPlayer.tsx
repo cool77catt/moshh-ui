@@ -1,11 +1,13 @@
 import React, {useState, useRef} from 'react';
 import {StyleSheet, View, ViewStyle, Pressable} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
-// import {NodePlayerView} from 'react-native-nodemediaclient';
-import {default as RNVideoPlayer} from 'react-native-video-player';
+import {NodePlayerView} from 'react-native-nodemediaclient';
+// import {default as RNVideoPlayer} from 'react-native-video-player';
 
 export type VideoPlayerPropsType = {
   videoUrl: string;
+  fullscreen: boolean | undefined;
+  autoplay: boolean | undefined;
 };
 
 const VideoPlayer = (props: VideoPlayerPropsType) => {
@@ -26,23 +28,27 @@ const VideoPlayer = (props: VideoPlayerPropsType) => {
     }
   };
 
+  console.log(props.videoUrl);
+
   return (
     <View style={styles.mainContainer}>
-      {/* <View style={styles.stackedViewStyle}> */}
-      <View
+      <View style={styles.stackedViewStyle}>
+      {/* <View
         style={{
           flex: 1,
           flexDirection: 'row',
           justifyContent: 'center',
           alignItems: 'center',
-        }}>
-        <RNVideoPlayer
+        }}> */}
+        {/* <RNVideoPlayer
           video={{uri: props.videoUrl}}
           // videoWidth={1600}
           // videoHeight={900}
+          fullscreen={props.fullscreen}
+          autoplay={props.autoplay}
           style={{aspectRatio: 16 / 9, height: undefined, width: '100%'}}
-        />
-        {/* <NodePlayerView
+        /> */}
+        <NodePlayerView
           style={styles.playerStyle}
           ref={playerRef}
           inputUrl={props.videoUrl}
@@ -50,13 +56,13 @@ const VideoPlayer = (props: VideoPlayerPropsType) => {
           bufferTime={300}
           maxBufferTime={1000}
           autoplay={true}
-        /> */}
+        />
       </View>
-      {/* <Pressable
+      <Pressable
         style={styles.pressableStyle}
         onPress={() => setPlayState(!playState)}>
         {renderPlayButton()}
-      </Pressable> */}
+      </Pressable>
     </View>
   );
 };
@@ -84,6 +90,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   playerStyle: {
+    flex: 1,
     height: '100%',
     width: '100%',
   },
