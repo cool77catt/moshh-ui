@@ -11,10 +11,11 @@ export type EventType = {
   description: string;
 };
 
-export type VideoType = {
+export interface VideoType {
   id: string;
-  event: EventType | undefined;
+  event?: EventType;
   url: string;
   title: string;
   description: string;
-};
+  comments?: string[];
+}

@@ -8,7 +8,7 @@
  * @format
  */
 
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   SafeAreaView,
@@ -62,6 +62,7 @@ const App = () => {
   const [videoDirReady, setVideoDirReady] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [resourcesLoaded, setResourcesLoaded] = useState(false);
+  const videoScreenRef = useRef<VideoScreen | null>(null);
 
   const checkResourceStatus = () => {
     const loadedStatus = isConnected && videoDirReady;
@@ -137,6 +138,8 @@ const App = () => {
     userInfo: currentUserInfo,
     setUserInfo: setCurrentUserInfo,
     signOutUser: performLogout,
+    videoScreenRef: videoScreenRef,
+    setVideoScreenRef: ref => (videoScreenRef.current = ref),
   };
 
   // Check the status of the resources that need to be loaded

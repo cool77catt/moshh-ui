@@ -52,7 +52,6 @@ const SavedScreen = () => {
   }, []);
 
   const onVideoCardPressed = (props: VideoCardProps) => {
-    console.log('play video', props.videoName);
     setVideoPath(props.videoPath);
   };
 

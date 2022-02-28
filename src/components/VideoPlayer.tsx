@@ -1,71 +1,134 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, createRef} from 'react';
 import {StyleSheet, View, ViewStyle, Pressable} from 'react-native';
-import {IconButton, Colors} from 'react-native-paper';
+import {IconButton, Colors, Text} from 'react-native-paper';
 import {NodePlayerView} from 'react-native-nodemediaclient';
 // import {default as RNVideoPlayer} from 'react-native-video-player';
 
-export type VideoPlayerPropsType = {
-  videoUrl: string;
-  fullscreen: boolean | undefined;
-  autoplay: boolean | undefined;
-};
+export interface VideoPlayerPropsType {
+  source: string;
+}
 
-const VideoPlayer = (props: VideoPlayerPropsType) => {
-  const playerRef = useRef<NodePlayerView>();
-  const [playState, setPlayState] = useState(true);
+export interface StateType {
+  playState: boolean;
+}
 
-  if (playState) {
-    playerRef.current?.start();
-  } else {
-    playerRef.current?.pause();
+class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
+  state = {
+    playState: true,
+  };
+  playerRef = createRef<NodePlayerView>();
+
+  start() {
+    if (!this.state.playState) {
+      this.playerRef.current.start();
+    }
+
+    this.setState({playState: true});
   }
 
-  const renderPlayButton = () => {
-    if (!playState) {
+  stop() {
+    this.playerRef.current.stop();
+  }
+
+  pause() {
+    if (this.state.playState) {
+      this.playerRef.current.pause();
+    }
+
+    this.setState({playState: false});
+  }
+
+  playButtonClicked() {
+    // Control the video (note, the state hasn't been toggled yet
+    // so it represents the current state, not future)
+    if (this.state.playState) {
+      this.pause();
+    } else {
+      this.start();
+    }
+
+    // Toggle the play state
+    // this.setState(state => ({
+    //   playState: !state.playState,
+    // }));
+  }
+
+  renderPlayButton() {
+    if (!this.state.playState) {
       return (
         <IconButton icon="play-circle-outline" size={75} color={Colors.white} />
       );
     }
-  };
+  }
 
-  console.log(props.videoUrl);
-
-  return (
-    <View style={styles.mainContainer}>
-      <View style={styles.stackedViewStyle}>
-      {/* <View
-        style={{
-          flex: 1,
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}> */}
-        {/* <RNVideoPlayer
-          video={{uri: props.videoUrl}}
-          // videoWidth={1600}
-          // videoHeight={900}
-          fullscreen={props.fullscreen}
-          autoplay={props.autoplay}
-          style={{aspectRatio: 16 / 9, height: undefined, width: '100%'}}
-        /> */}
-        <NodePlayerView
-          style={styles.playerStyle}
-          ref={playerRef}
-          inputUrl={props.videoUrl}
-          scaleMode={'ScaleAspectFit'}
-          bufferTime={300}
-          maxBufferTime={1000}
-          autoplay={true}
-        />
+  render() {
+    return (
+      <View style={styles.mainContainer}>
+        <View style={styles.stackedViewStyle}>
+          <NodePlayerView
+            style={styles.playerStyle}
+            ref={this.playerRef}
+            inputUrl={this.props.source}
+            scaleMode={'ScaleAspectFit'}
+            bufferTime={300}
+            maxBufferTime={1000}
+            autoplay={true}
+          />
+        </View>
+        <Pressable
+          style={styles.pressableStyle}
+          onPress={this.playButtonClicked.bind(this)}>
+          {this.renderPlayButton()}
+        </Pressable>
       </View>
-      <Pressable
-        style={styles.pressableStyle}
-        onPress={() => setPlayState(!playState)}>
-        {renderPlayButton()}
-      </Pressable>
-    </View>
-  );
-};
+    );
+  }
+}
+
+// const VideoPlayer = (props: VideoPlayerPropsType) => {
+//   const playerRef = useRef<NodePlayerView>();
+//   const [playState, setPlayState] = useState(true);
+
+//   if (playState) {
+//     playerRef.current?.start();
+//   } else {
+//     playerRef.current?.pause();
+//   }
+
+//   const stop = () => {
+//     console.log("stop the video");
+//   };
+
+//   const renderPlayButton = () => {
+//     if (!playState) {
+//       return (
+//         <IconButton icon="play-circle-outline" size={75} color={Colors.white} />
+//       );
+//     }
+//   };
+
+//   return (
+//     <View style={styles.mainContainer}>
+//       <View style={styles.stackedViewStyle}>
+//         <Text style={{color: 'white'}}>{props.source}</Text>
+//         {/* <NodePlayerView
+//           style={styles.playerStyle}
+//           ref={playerRef}
+//           inputUrl={props.videoUrl}
+//           scaleMode={'ScaleAspectFit'}
+//           bufferTime={300}
+//           maxBufferTime={1000}
+//           autoplay={true}
+//         /> */}
+//       </View>
+//       <Pressable
+//         style={styles.pressableStyle}
+//         onPress={() => setPlayState(!playState)}>
+//         {renderPlayButton()}
+//       </Pressable>
+//     </View>
+//   );
+// };
 
 const stackedViewStyle: ViewStyle = {
   flex: 1,
