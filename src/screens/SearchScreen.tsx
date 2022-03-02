@@ -113,8 +113,7 @@ const _LocalSearchScreen = () => {
 
 const SearchScreen = () => {
   const globalContext = useContext(GlobalContext);
-  // const vidScreenRef = useRef<VideoScreen | undefined>(); // Added the "| null" makes it mutable, without it, typescript complains when trying to set
-  const navigation = useNavigation<NavigationProps>();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('blur', () => {
@@ -124,16 +123,6 @@ const SearchScreen = () => {
 
     return unsubscribe;
   }, [navigation, globalContext]);
-
-  // useEffect(() => {
-  //   const unsubscribe = navigation.addListener('focus', () => {
-  //     // Stop the player
-  //     console.log('gained focus');
-  //     setIsFocused(true);
-  //   });
-
-  //   return unsubscribe;
-  // }, [navigation]);
 
   return (
     <NavigationContainer independent={true}>

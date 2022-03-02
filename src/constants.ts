@@ -1,5 +1,5 @@
 // Setup directory/file paths
-const RNFS = require('react-native-fs');
+import RNFS from 'react-native-fs';
 
 // Setup Video Settings
 export const VIDEO_DIRECTORY = RNFS.DocumentDirectoryPath + '/videos';

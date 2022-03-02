@@ -46,11 +46,6 @@ class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
     } else {
       this.start();
     }
-
-    // Toggle the play state
-    // this.setState(state => ({
-    //   playState: !state.playState,
-    // }));
   }
 
   renderPlayButton() {
@@ -84,51 +79,6 @@ class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
     );
   }
 }
-
-// const VideoPlayer = (props: VideoPlayerPropsType) => {
-//   const playerRef = useRef<NodePlayerView>();
-//   const [playState, setPlayState] = useState(true);
-
-//   if (playState) {
-//     playerRef.current?.start();
-//   } else {
-//     playerRef.current?.pause();
-//   }
-
-//   const stop = () => {
-//     console.log("stop the video");
-//   };
-
-//   const renderPlayButton = () => {
-//     if (!playState) {
-//       return (
-//         <IconButton icon="play-circle-outline" size={75} color={Colors.white} />
-//       );
-//     }
-//   };
-
-//   return (
-//     <View style={styles.mainContainer}>
-//       <View style={styles.stackedViewStyle}>
-//         <Text style={{color: 'white'}}>{props.source}</Text>
-//         {/* <NodePlayerView
-//           style={styles.playerStyle}
-//           ref={playerRef}
-//           inputUrl={props.videoUrl}
-//           scaleMode={'ScaleAspectFit'}
-//           bufferTime={300}
-//           maxBufferTime={1000}
-//           autoplay={true}
-//         /> */}
-//       </View>
-//       <Pressable
-//         style={styles.pressableStyle}
-//         onPress={() => setPlayState(!playState)}>
-//         {renderPlayButton()}
-//       </Pressable>
-//     </View>
-//   );
-// };
 
 const stackedViewStyle: ViewStyle = {
   flex: 1,

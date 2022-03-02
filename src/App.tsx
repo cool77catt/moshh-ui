@@ -39,17 +39,14 @@ import {
   VideoScreen,
   CreateUserScreen,
 } from './screens';
-import {MoshhIcon} from './components';
+import MoshhIcon from './components/MoshhIcon';
 import {VIDEO_DIRECTORY} from './constants';
 import {GlobalContext, GlobalContextType} from './contexts';
-import {UserDbRecordType, getUserInfo, setDefaultUserInfo} from './utils/firestoreDb';
-
-// TODO: look into  react-native-nodemediaclient for streaming HLS
-
-// TODO: Setup the theme/color scheme
-// TODO: Add to app store
-
-// TODO: test handle creation if there is no internet.  Cna you recreate a handle?
+import {
+  UserDbRecordType,
+  getUserInfo,
+  setDefaultUserInfo,
+} from './utils/firestoreDb';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -73,6 +70,7 @@ const App = () => {
   };
 
   const loadResources = async () => {
+    console.log('dir', RNFS.DocumentDirectoryPath);
     // Setup the vids directory
     RNFS.mkdir(VIDEO_DIRECTORY)
       .then(() => setVideoDirReady(true))
@@ -185,11 +183,11 @@ const App = () => {
               component={SearchScreen}
               options={{tabBarIcon: 'magnify'}}
             />
-            {/* <Tab.Screen
-              name="Record"
+            <Tab.Screen
+              name="Rec"
               component={RecordScreen}
               options={{tabBarIcon: 'plus-circle-outline'}}
-            /> */}
+            />
             <Tab.Screen
               name="Saved"
               component={SavedScreen}

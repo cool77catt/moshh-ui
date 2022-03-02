@@ -15,7 +15,7 @@ import {
   User,
 } from '@react-native-google-signin/google-signin';
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
-import {MoshhIcon, LoadingModal} from '../components';
+import MoshhIcon from '../components/MoshhIcon';
 import config from '../config';
 import {LoginMethodType} from '../types';
 import {GlobalContext, GlobalContextType} from '../contexts/GlobalContext';
