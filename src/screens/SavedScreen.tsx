@@ -8,9 +8,9 @@ import {
   ListRenderItem,
   StyleSheet,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {Button, ActivityIndicator, IconButton} from 'react-native-paper';
 import RNFS, {ReadDirItem, StatResult} from 'react-native-fs';
-import {NodePlayerView} from 'react-native-nodemediaclient';
 import {VIDEO_DIRECTORY} from '../constants';
 import VideoCard, {VideoCardProps} from '../components/VideoCard';
 import VideoModal from '../components/VideoModal';
@@ -26,6 +26,7 @@ type VideoInfo = {
 };
 
 const SavedScreen = () => {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -51,7 +52,14 @@ const SavedScreen = () => {
   };
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Stop the player
+      refreshVideosList();
+    });
     refreshVideosList();
+
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const exitEditMode = useCallback(() => {
@@ -155,6 +163,7 @@ const SavedScreen = () => {
         <VideoModal
           source={videoPath}
           visible={videoPath !== ''}
+          repeat={true}
           onClose={() => setVideoPath('')}
         />
         <FlatList

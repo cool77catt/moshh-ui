@@ -36,7 +36,6 @@ import {
   ProfileScreen,
   HomeScreen,
   RecordScreen,
-  VideoScreen,
   CreateUserScreen,
 } from './screens';
 import MoshhIcon from './components/MoshhIcon';
@@ -47,6 +46,7 @@ import {
   getUserInfo,
   setDefaultUserInfo,
 } from './utils/firestoreDb';
+import VideoModal from './components/VideoModal';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -59,7 +59,7 @@ const App = () => {
   const [videoDirReady, setVideoDirReady] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [resourcesLoaded, setResourcesLoaded] = useState(false);
-  const videoScreenRef = useRef<VideoScreen | null>(null);
+  const videoModalRef = useRef<VideoModal | null>(null);
 
   const checkResourceStatus = () => {
     const loadedStatus = isConnected && videoDirReady;
@@ -136,8 +136,8 @@ const App = () => {
     userInfo: currentUserInfo,
     setUserInfo: setCurrentUserInfo,
     signOutUser: performLogout,
-    videoScreenRef: videoScreenRef,
-    setVideoScreenRef: ref => (videoScreenRef.current = ref),
+    videoModalRef: videoModalRef,
+    setVideoModalRef: ref => (videoModalRef.current = ref),
   };
 
   // Check the status of the resources that need to be loaded
@@ -179,7 +179,6 @@ const App = () => {
             /> */}
             <Tab.Screen
               name="Search"
-              // component={VideoScreen}
               component={SearchScreen}
               options={{tabBarIcon: 'magnify'}}
             />

@@ -15,6 +15,14 @@ Note: some require --legacy-peer-deps flag passed into "npm install"
 
 npx react-native run-ios
 
+# Deploy to Test Flight
+* Open in XCode
+* Product -> Archive
+* (After its been built)
+* Go to apple developer portal at (appstoreconnect.apple.com)
+* Select the App
+* Go to "Testflight"
+
 
 # Splashscreen
 

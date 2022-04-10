@@ -1,21 +1,20 @@
 import React, {createRef} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {Portal, Modal, FAB} from 'react-native-paper';
-import VideoPlayer from '../components/VideoPlayer';
+import VideoPlayer, {VideoPlayerProps} from '../components/VideoPlayer';
 import {GlobalContext} from '../contexts';
 
-interface PropsType {
+interface VideoModalProps extends VideoPlayerProps {
   visible: boolean;
-  source: string;
   onClose?: () => void;
 }
 
-class VideoModal extends React.Component<PropsType> {
+class VideoModal extends React.Component<VideoModalProps> {
   static contextType = GlobalContext;
   _playerRef = createRef<VideoPlayer>();
 
   componentDidMount() {
-    this.context.setVideoScreenRef?.(this);
+    this.context.setVideoModalRef?.(this);
   }
 
   pause() {
@@ -34,11 +33,22 @@ class VideoModal extends React.Component<PropsType> {
   }
 
   render() {
+    let videoPlayer;
+    if (this.props.source !== '') {
+      videoPlayer = (
+        <VideoPlayer
+          {...this.props}
+          ref={this._playerRef}
+          source={this.props.source}
+        />
+      );
+    }
+
     return (
       <Portal>
         <Modal visible={this.props.visible} dismissable={false}>
           <View style={styles.mainContainer}>
-            {this.renderVideoPlayer()}
+            {videoPlayer}
             <FAB
               style={styles.fab}
               small

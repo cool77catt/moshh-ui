@@ -50,6 +50,8 @@
 	<string>Moshh requires access to your phone’s camera.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSAllowsArbitraryLoads</key>
+	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Moshh requires access to your phone’s Microphone.</string>
 	<key>UIAppFonts</key>

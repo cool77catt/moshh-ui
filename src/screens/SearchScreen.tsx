@@ -16,13 +16,13 @@ import VideoPlayer from '../components/VideoPlayer';
 import {TestEvents, TestVideos} from '../testData';
 import {EventType, VideoType} from '../types';
 import {GlobalContext} from '../contexts';
-import VideoScreen, {VideoScreenParams, NAV_ROUTE_VIDEO} from './VideoScreen';
+import VideoModal from '../components/VideoModal';
 
 const _NAV_ROUTE_HOME = 'Home';
 
 type RootStackParamList = {
   [_NAV_ROUTE_HOME]: undefined;
-  [NAV_ROUTE_VIDEO]: VideoScreenParams;
+  // [NAV_ROUTE_VIDEO]: VideoScreenParams;
 };
 
 type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
@@ -39,15 +39,29 @@ const _LocalSearchScreen = () => {
   const [searchValue, setSearchValue] = useState('');
   const [expandVideos, setExpandVideos] = useState(true);
   const [expandEvents, setExpandEvents] = useState(false);
+  const [videoSource, setVideoSource] = useState('');
 
   const videoSelected = (item: VideoType) => {
-    navigation.push(NAV_ROUTE_VIDEO, {source: item.url});
+    // navigation.push(NAV_ROUTE_VIDEO, {source: item.url});
+    setVideoSource(item.url);
   };
+
+  let videoModal;
+  if (videoSource !== '') {
+    videoModal = (
+      <VideoModal
+        source={videoSource}
+        visible={true}
+        onClose={() => setVideoSource('')}
+      />
+    );
+  }
 
   return (
     // TouchableWithoutFeedback wrapper required to dismiss the keyboard
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={styles.mainContainer}>
+        {videoModal}
         <View style={styles.searchBarContainer}>
           <Searchbar
             placeholder="Search"
@@ -118,7 +132,7 @@ const SearchScreen = () => {
   useEffect(() => {
     const unsubscribe = navigation.addListener('blur', () => {
       // Stop the player
-      globalContext.videoScreenRef?.current?.pause();
+      globalContext.videoModalRef?.current?.pause();
     });
 
     return unsubscribe;
@@ -130,11 +144,6 @@ const SearchScreen = () => {
         <Stack.Screen
           name={_NAV_ROUTE_HOME}
           component={_LocalSearchScreen}
-          options={navigatorOptions}
-        />
-        <Stack.Screen
-          name={NAV_ROUTE_VIDEO}
-          component={VideoScreen}
           options={navigatorOptions}
         />
       </Stack.Navigator>

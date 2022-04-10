@@ -1,6 +1,6 @@
 import React, {useContext, useRef, useState, useCallback} from 'react';
 import {Text, View, ViewStyle, Pressable} from 'react-native';
-import {NodePlayerView} from 'react-native-nodemediaclient';
+// import {NodePlayerView} from 'react-native-nodemediaclient';
 import {IconButton, Colors} from 'react-native-paper';
 import {useFocusEffect} from '@react-navigation/native';
 import {GlobalContext} from '../contexts';

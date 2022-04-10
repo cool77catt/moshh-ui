@@ -1,10 +1,11 @@
 import React, {useState, useRef, createRef} from 'react';
 import {StyleSheet, View, ViewStyle, Pressable} from 'react-native';
 import {IconButton, Colors, Text} from 'react-native-paper';
-import {NodePlayerView} from 'react-native-nodemediaclient';
+import Video, {VideoProperties} from 'react-native-video';
+// import {NodePlayerView} from 'react-native-nodemediaclient';
 // import {default as RNVideoPlayer} from 'react-native-video-player';
 
-export interface VideoPlayerPropsType {
+export interface VideoPlayerProps extends Omit<VideoProperties, 'source'> {
   source: string;
 }
 
@@ -12,27 +13,28 @@ export interface StateType {
   playState: boolean;
 }
 
-class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
+class VideoPlayer extends React.Component<VideoPlayerProps, StateType> {
   state = {
     playState: true,
   };
-  playerRef = createRef<NodePlayerView>();
+  playerRef = createRef<Video>();
+  // playerRef = createRef<NodePlayerView>();
 
   start() {
     if (!this.state.playState) {
-      this.playerRef.current.start();
+      // this.playerRef.current.start();
     }
 
     this.setState({playState: true});
   }
 
-  stop() {
-    this.playerRef.current.stop();
-  }
+  // stop() {
+  //   this.playerRef.current.stop();
+  // }
 
   pause() {
     if (this.state.playState) {
-      this.playerRef.current.pause();
+      // this.playerRef.current.pause();
     }
 
     this.setState({playState: false});
@@ -57,10 +59,18 @@ class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
   }
 
   render() {
+    console.log(this.props.source, this.state.playState);
     return (
       <View style={styles.mainContainer}>
         <View style={styles.stackedViewStyle}>
-          <NodePlayerView
+          <Video
+            {...this.props}
+            source={{uri: this.props.source}}
+            paused={!this.state.playState}
+            style={styles.playerStyle}
+            ref={this.playerRef}
+          />
+          {/* <NodePlayerView
             style={styles.playerStyle}
             ref={this.playerRef}
             inputUrl={this.props.source}
@@ -68,7 +78,7 @@ class VideoPlayer extends React.Component<VideoPlayerPropsType, StateType> {
             bufferTime={300}
             maxBufferTime={1000}
             autoplay={true}
-          />
+          /> */}
         </View>
         <Pressable
           style={styles.pressableStyle}

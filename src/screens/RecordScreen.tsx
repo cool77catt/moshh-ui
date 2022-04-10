@@ -7,6 +7,7 @@ import {
   VideoFile,
   CameraCaptureError,
   useCameraDevices,
+  CameraPermissionRequestResult,
 } from 'react-native-vision-camera';
 import RNFS from 'react-native-fs';
 import {VIDEO_DIRECTORY} from '../constants';
@@ -14,6 +15,10 @@ import {VIDEO_DIRECTORY} from '../constants';
 const RecordScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [flashState, setFlashState] = useState<'auto' | 'on' | 'off'>('auto');
+  const [cameraPermission, setCameraPermission] =
+    useState<CameraPermissionRequestResult | null>(null);
+  const [microphonePermission, setMicrophonePermission] =
+    useState<CameraPermissionRequestResult | null>(null);
   const cameraRef = useRef<Camera>(null);
 
   const devices = useCameraDevices();
@@ -26,13 +31,24 @@ const RecordScreen = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
+    const getPermission = async () => {
+      setCameraPermission(await Camera.requestCameraPermission());
+      setMicrophonePermission(await Camera.requestMicrophonePermission());
+    };
+    getPermission();
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('blur', async () => {
       // Stop the player
-      await cameraRef.current?.stopRecording();
-      setIsRecording(false);
+      if (isRecording) {
+        await cameraRef.current?.stopRecording();
+        setIsRecording(false);
+      }
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
   const recordingFinished = (video: VideoFile) => {
@@ -56,6 +72,7 @@ const RecordScreen = () => {
       // Start Recording
       cameraRef.current?.startRecording({
         flash: flashState,
+        fileType: 'mp4',
         onRecordingFinished: recordingFinished,
         onRecordingError: (error: CameraCaptureError) =>
           Alert.alert('Error', error.toString()),
