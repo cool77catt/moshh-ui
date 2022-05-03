@@ -15,6 +15,7 @@ import {VIDEO_DIRECTORY} from '../constants';
 import VideoCard, {VideoCardProps} from '../components/VideoCard';
 import VideoModal from '../components/VideoModal';
 import {setDefaultUserInfo} from '../utils/firestoreDb';
+import CloudVideoWriter from '../utils/fileStorage/CloudVideoWriter';
 
 // Add in a top-navigation bar for My Videos and Reels
 // Option to remove/delete the video
@@ -29,6 +30,7 @@ const SavedScreen = () => {
   const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editList, setEditList] = useState<VideoInfo[]>([]);
   const [videosList, setVideosList] = useState<VideoInfo[]>([]);
@@ -81,6 +83,16 @@ const SavedScreen = () => {
       RNFS.unlink(value.path).then(() => {
         refreshVideosList();
       });
+    });
+  };
+
+  const uploadVideos = () => {
+    // Startup a waiting icon
+    editList.forEach(async value => {
+      const videoId = value.name.split('.')[0];
+      await CloudVideoWriter.writeVideo(value.path, videoId).catch(
+        (error: Error) => console.log(error),
+      );
     });
   };
 
@@ -142,7 +154,11 @@ const SavedScreen = () => {
               disabled={editList.length === 0}>
               Delete
             </Button>
-            <Button mode="contained" style={styles.button} disabled={true}>
+            <Button
+              mode="contained"
+              style={styles.button}
+              onPress={() => uploadVideos()}
+              disabled={editList.length === 0}>
               Upload
             </Button>
           </View>
@@ -166,6 +182,7 @@ const SavedScreen = () => {
           repeat={true}
           onClose={() => setVideoPath('')}
         />
+        <ActivityIndicator animating={isProcessing} size="large" />
         <FlatList
           data={videosList}
           style={{flex: 1, width: '100%'}}

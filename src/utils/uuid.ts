@@ -2,5 +2,5 @@ import 'react-native-get-random-values'; // Need to import before uuid. See http
 import {v4 as uuidv4} from 'uuid';
 
 export function generateUuid() {
-  return uuidv4();
+  return uuidv4().toUpperCase();
 }

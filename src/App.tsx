@@ -208,7 +208,6 @@ const App = () => {
     <GlobalContext.Provider value={globalContextValue}>
       <SafeAreaView style={{flex: 1}}>
         <PaperProvider theme={{...DefaultTheme, dark: false}}>
-          {/* {renderTestPane()} */}
           {renderMainComponent()}
         </PaperProvider>
       </SafeAreaView>

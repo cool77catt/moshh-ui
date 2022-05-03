@@ -51,16 +51,18 @@ const RecordScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
+  const saveVideo = (video: VideoFile) => {
+    const filename = video.path.split('/').reverse()[0];
+    const newFilepath = VIDEO_DIRECTORY + '/' + filename;
+    RNFS.moveFile(video.path, newFilepath);
+  };
+
   const recordingFinished = (video: VideoFile) => {
     // Prompt user if they want to save
     Alert.alert('Save', 'Do you wish to save this video?', [
       {
         text: 'Yes',
-        onPress: () => {
-          const filename = video.path.split('/').reverse()[0];
-          const newFilepath = VIDEO_DIRECTORY + '/' + filename;
-          RNFS.moveFile(video.path, newFilepath);
-        },
+        onPress: () => saveVideo(video),
       },
       {text: 'No'},
     ]);
