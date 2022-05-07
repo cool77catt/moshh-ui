@@ -9,14 +9,7 @@
  */
 
 import React, {useState, useEffect, useRef} from 'react';
-import {
-  View,
-  SafeAreaView,
-  Alert,
-  StyleSheet,
-  StyleProp,
-  TextStyle,
-} from 'react-native';
+import {View, SafeAreaView, Alert, StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {
   Provider as PaperProvider,
@@ -25,21 +18,17 @@ import {
   DefaultTheme,
 } from 'react-native-paper';
 import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
-import RNFS from 'react-native-fs';
-import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
+import auth from '@react-native-firebase/auth';
 import RNBootSplash from 'react-native-bootsplash';
 import {
   LoginScreen,
   SearchScreen,
   SavedScreen,
-  FilterScreen,
   ProfileScreen,
-  HomeScreen,
   RecordScreen,
   CreateUserScreen,
 } from './screens';
 import MoshhIcon from './components/MoshhIcon';
-import {VIDEO_DIRECTORY} from './constants';
 import {GlobalContext, GlobalContextType} from './contexts';
 import {
   UserDbRecordType,
@@ -47,6 +36,8 @@ import {
   setDefaultUserInfo,
 } from './utils/firestoreDb';
 import VideoModal from './components/VideoModal';
+import {VideoController} from './video';
+import {RNFSFileStore} from './localStorage';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -56,33 +47,27 @@ const App = () => {
     useState<UserDbRecordType | null>(null);
   // const [userHandleValid, setUserHandleValid] = useState<boolean>(false);
   // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
-  const [videoDirReady, setVideoDirReady] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [resourcesLoaded, setResourcesLoaded] = useState(false);
   const videoModalRef = useRef<VideoModal | null>(null);
 
   const checkResourceStatus = () => {
-    const loadedStatus = isConnected && videoDirReady;
+    const loadedStatus = isConnected;
     if (!resourcesLoaded && loadedStatus) {
       RNBootSplash.hide({fade: true});
       setResourcesLoaded(true);
     }
   };
 
-  const loadResources = async () => {
-    console.log('dir', RNFS.DocumentDirectoryPath);
-    // Setup the vids directory
-    RNFS.mkdir(VIDEO_DIRECTORY)
-      .then(() => setVideoDirReady(true))
-      .catch((err: Error) => {
-        Alert.alert('Error', `Error with video directory: ${err.message}`);
-      });
+  const configureModules = async () => {
+    const RNFSStorage = await RNFSFileStore.configure();
+    await VideoController.configure(RNFSStorage!);
   };
 
   // Setup the initial connection with the firebase auth
   useEffect(() => {
     // Load the resources
-    loadResources();
+    configureModules();
 
     const subscriber = auth().onAuthStateChanged(user => {
       if (!isConnected) {
@@ -96,6 +81,7 @@ const App = () => {
         Alert.alert('Error', 'User has no email address...');
         setCurrentUserInfo(null);
       } else {
+        console.log('User Id:', user.uid);
         getUserInfo(user.uid)
           .then((data: UserDbRecordType) => {
             if (!data) {

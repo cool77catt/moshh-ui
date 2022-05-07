@@ -1,24 +1,20 @@
-import React, {useRef, useState, useEffect, useCallback} from 'react';
+import React, {useRef, useState, useEffect} from 'react';
 import {Alert, View, ViewStyle} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import {
   Camera,
   VideoFile,
   CameraCaptureError,
   useCameraDevices,
-  CameraPermissionRequestResult,
+  VideoFileType,
 } from 'react-native-vision-camera';
-import RNFS from 'react-native-fs';
-import {VIDEO_DIRECTORY} from '../constants';
+import {VideoController} from '../video';
+import {generateUuid} from '../utils/uuid';
 
 const RecordScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [flashState, setFlashState] = useState<'auto' | 'on' | 'off'>('auto');
-  const [cameraPermission, setCameraPermission] =
-    useState<CameraPermissionRequestResult | null>(null);
-  const [microphonePermission, setMicrophonePermission] =
-    useState<CameraPermissionRequestResult | null>(null);
   const cameraRef = useRef<Camera>(null);
 
   const devices = useCameraDevices();
@@ -32,8 +28,8 @@ const RecordScreen = () => {
 
   useEffect(() => {
     const getPermission = async () => {
-      setCameraPermission(await Camera.requestCameraPermission());
-      setMicrophonePermission(await Camera.requestMicrophonePermission());
+      await Camera.requestCameraPermission();
+      await Camera.requestMicrophonePermission();
     };
     getPermission();
   }, []);
@@ -52,9 +48,8 @@ const RecordScreen = () => {
   }, [navigation]);
 
   const saveVideo = (video: VideoFile) => {
-    const filename = video.path.split('/').reverse()[0];
-    const newFilepath = VIDEO_DIRECTORY + '/' + filename;
-    RNFS.moveFile(video.path, newFilepath);
+    const videoId = generateUuid();
+    VideoController.getInstance()?.saveVideo(video.path, videoId);
   };
 
   const recordingFinished = (video: VideoFile) => {
@@ -74,7 +69,7 @@ const RecordScreen = () => {
       // Start Recording
       cameraRef.current?.startRecording({
         flash: flashState,
-        fileType: 'mp4',
+        fileType: VideoController.DEFAULT_VIDEO_EXTENSION as VideoFileType,
         onRecordingFinished: recordingFinished,
         onRecordingError: (error: CameraCaptureError) =>
           Alert.alert('Error', error.toString()),

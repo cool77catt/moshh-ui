@@ -9,13 +9,11 @@ import {
   StyleSheet,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {Button, ActivityIndicator, IconButton} from 'react-native-paper';
+import {Button, ActivityIndicator, IconButton, List} from 'react-native-paper';
 import RNFS, {ReadDirItem, StatResult} from 'react-native-fs';
-import {VIDEO_DIRECTORY} from '../constants';
 import VideoCard, {VideoCardProps} from '../components/VideoCard';
 import VideoModal from '../components/VideoModal';
-import {setDefaultUserInfo} from '../utils/firestoreDb';
-import CloudVideoWriter from '../utils/fileStorage/CloudVideoWriter';
+import {VideoController} from '../video';
 
 // Add in a top-navigation bar for My Videos and Reels
 // Option to remove/delete the video
@@ -35,11 +33,14 @@ const SavedScreen = () => {
   const [editList, setEditList] = useState<VideoInfo[]>([]);
   const [videosList, setVideosList] = useState<VideoInfo[]>([]);
   const [videoPath, setVideoPath] = useState('');
+  const videoController = VideoController.getInstance();
 
   const refreshVideosList = () => {
     exitEditMode();
-    RNFS.readDir(VIDEO_DIRECTORY)
-      .then((result: ReadDirItem[]) => {
+
+    videoController
+      ?.getCapturedVideosList()
+      ?.then((result: ReadDirItem[]) => {
         const vidInfo = result.map(file => ({
           name: file.name,
           path: file.path,
@@ -79,20 +80,18 @@ const SavedScreen = () => {
   };
 
   const deleteVideos = () => {
-    editList.forEach(value => {
-      RNFS.unlink(value.path).then(() => {
-        refreshVideosList();
-      });
-    });
+    // editList.forEach(value => {
+    //   videoController?.deleteVideo(value.)
+    // });
   };
 
   const uploadVideos = () => {
     // Startup a waiting icon
     editList.forEach(async value => {
       const videoId = value.name.split('.')[0];
-      await CloudVideoWriter.writeVideo(value.path, videoId).catch(
-        (error: Error) => console.log(error),
-      );
+      // await CloudVideoWriter.writeVideo(value.path, videoId).catch(
+      //   (error: Error) => console.log(error),
+      // );
     });
   };
 
@@ -108,6 +107,8 @@ const SavedScreen = () => {
     setEditList([...editList, item]);
     setEditMode(true);
   };
+
+  // const renderVideoList
 
   const renderVideoCard: ListRenderItem<VideoInfo> = ({item}) => {
     let editIcon;
@@ -183,14 +184,21 @@ const SavedScreen = () => {
           onClose={() => setVideoPath('')}
         />
         <ActivityIndicator animating={isProcessing} size="large" />
-        <FlatList
-          data={videosList}
-          style={{flex: 1, width: '100%'}}
-          renderItem={renderVideoCard}
-          keyExtractor={item => item.name}
-          refreshing={refreshing}
-          onRefresh={refreshVideosList}
-        />
+        <View style={styles.accordionGroupContainer}>
+          <List.AccordionGroup>
+            <List.Accordion title="Unknown" id="1">
+              {/* <List.Item title="Item 1" /> */}
+              {/* <FlatList
+                data={videosList}
+                style={{flex: 1, width: '100%'}}
+                renderItem={renderVideoCard}
+                keyExtractor={item => item.name}
+                refreshing={refreshing}
+                onRefresh={refreshVideosList}
+              /> */}
+            </List.Accordion>
+          </List.AccordionGroup>
+        </View>
         {renderEditModeButtons()}
       </View>
     );
@@ -203,6 +211,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
+  },
+  accordionGroupContainer: {
+    width: '100%',
   },
   editBarContainer: {
     flexDirection: 'row',
