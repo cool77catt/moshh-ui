@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect} from 'react';
+import React, {useRef, useState, useEffect, useContext} from 'react';
 import {Alert, View, ViewStyle} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
@@ -9,6 +9,7 @@ import {
   useCameraDevices,
   VideoFileType,
 } from 'react-native-vision-camera';
+import auth from '@react-native-firebase/auth';
 import {VideoController} from '../video';
 import {generateUuid} from '../utils/uuid';
 
@@ -49,7 +50,11 @@ const RecordScreen = () => {
 
   const saveVideo = (video: VideoFile) => {
     const videoId = generateUuid();
-    VideoController.getInstance()?.saveVideo(video.path, videoId);
+    VideoController.getInstance()?.saveVideo(
+      video.path,
+      videoId,
+      auth().currentUser!.uid,
+    );
   };
 
   const recordingFinished = (video: VideoFile) => {

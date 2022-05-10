@@ -45,7 +45,7 @@ const LoginScreen = () => {
     try {
       await GoogleSignin.hasPlayServices();
 
-      // Sign in 
+      // Sign in
       const {idToken} = await GoogleSignin.signIn();
 
       // Create a Google credential with the token

@@ -721,6 +721,9 @@ PODS:
     - FlipperKit/Core
     - FlipperKit/FlipperKitNetworkPlugin
   - fmt (6.2.1)
+  - GCDWebServer (3.5.4):
+    - GCDWebServer/Core (= 3.5.4)
+  - GCDWebServer/Core (3.5.4)
   - glog (0.3.5)
   - GoogleDataTransport (9.1.2):
     - GoogleUtilities/Environment (~> 7.2)
@@ -1089,6 +1092,9 @@ PODS:
     - React-jsi (= 0.66.4)
     - React-logger (= 0.66.4)
     - React-perflogger (= 0.66.4)
+  - RealmJS (10.16.0):
+    - GCDWebServer
+    - React
   - RNBootSplash (4.1.2):
     - React-Core
   - RNFBApp (14.8.1):
@@ -1182,6 +1188,7 @@ DEPENDENCIES:
   - React-RCTVibration (from `../node_modules/react-native/Libraries/Vibration`)
   - React-runtimeexecutor (from `../node_modules/react-native/ReactCommon/runtimeexecutor`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - RealmJS (from `../node_modules/realm`)
   - RNBootSplash (from `../node_modules/react-native-bootsplash`)
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
@@ -1216,6 +1223,7 @@ SPEC REPOS:
     - Flipper-RSocket
     - FlipperKit
     - fmt
+    - GCDWebServer
     - GoogleDataTransport
     - GoogleSignIn
     - GoogleUtilities
@@ -1298,6 +1306,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/runtimeexecutor"
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RealmJS:
+    :path: "../node_modules/realm"
   RNBootSplash:
     :path: "../node_modules/react-native-bootsplash"
   RNFBApp:
@@ -1346,6 +1356,7 @@ SPEC CHECKSUMS:
   Flipper-RSocket: d9d9ade67cbecf6ac10730304bf5607266dd2541
   FlipperKit: d8d346844eca5d9120c17d441a2f38596e8ed2b9
   fmt: ff9d55029c625d3757ed641535fd4a75fedc7ce9
+  GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
   glog: 5337263514dd6f09803962437687240c5dc39aa4
   GoogleDataTransport: 629c20a4d363167143f30ea78320d5a7eb8bd940
   GoogleSignIn: fd381840dbe7c1137aa6dc30849a5c3e070c034a
@@ -1388,6 +1399,7 @@ SPEC CHECKSUMS:
   React-RCTVibration: e3ffca672dd3772536cb844274094b0e2c31b187
   React-runtimeexecutor: dec32ee6f2e2a26e13e58152271535fadff5455a
   ReactCommon: 57b69f6383eafcbd7da625bfa6003810332313c4
+  RealmJS: 8a3478957315c29cdc0b3f958f2e370d22330b2d
   RNBootSplash: a4d2c545e1f5d54c12f75d4763b7014758d24287
   RNFBApp: 6aa068869d959488039cbceb2d830f53d4136c72
   RNFBAuth: 0ae809a3cc2317450d0727b4e5cd54e8108cf6c9

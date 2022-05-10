@@ -15,6 +15,7 @@ class RNFSFileStore implements ILocalFileStore {
   static async configure() {
     if (this._instance == null) {
       this._instance = new RNFSFileStore();
+      console.log(this._instance.documentDirectoryPath());
     }
     return this.getInstance();
   }

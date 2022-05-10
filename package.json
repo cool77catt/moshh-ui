@@ -32,6 +32,7 @@
     "react-native-vector-icons": "^9.0.0",
     "react-native-video": "^5.2.0",
     "react-native-vision-camera": "^2.12.1",
+    "realm": "^10.16.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {

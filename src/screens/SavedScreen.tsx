@@ -9,19 +9,26 @@ import {
   StyleSheet,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {Button, ActivityIndicator, IconButton, List} from 'react-native-paper';
-import RNFS, {ReadDirItem, StatResult} from 'react-native-fs';
-import VideoCard, {VideoCardProps} from '../components/VideoCard';
+import {
+  Avatar,
+  Button,
+  ActivityIndicator,
+  IconButton,
+  List,
+} from 'react-native-paper';
+import {createThumbnail, Thumbnail} from 'react-native-create-thumbnail';
 import VideoModal from '../components/VideoModal';
-import {VideoController} from '../video';
+import {VideoController, VideoDbSchema} from '../video';
 
 // Add in a top-navigation bar for My Videos and Reels
 // Option to remove/delete the video
 // Option to upload to cloud
 
+const placeholderThumbnail = require('../static/img/placeholder.jpeg');
 type VideoInfo = {
-  name: string;
-  path: string;
+  metaData: VideoDbSchema;
+  localPath: string;
+  thumbnail: Thumbnail;
 };
 
 const SavedScreen = () => {
@@ -31,27 +38,57 @@ const SavedScreen = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editList, setEditList] = useState<VideoInfo[]>([]);
-  const [videosList, setVideosList] = useState<VideoInfo[]>([]);
+  // const [videosList, setVideosList] = useState<VideoDbSchema[]>([]);
+  const [videoInfoMap, setVideoInfoMap] = useState(
+    new Map<string, VideoInfo>(),
+  );
   const [videoPath, setVideoPath] = useState('');
   const videoController = VideoController.getInstance();
 
-  const refreshVideosList = () => {
+  const refreshVideosList = async () => {
     exitEditMode();
 
-    videoController
-      ?.getCapturedVideosList()
-      ?.then((result: ReadDirItem[]) => {
-        const vidInfo = result.map(file => ({
-          name: file.name,
-          path: file.path,
-        }));
-        setVideosList(vidInfo);
-        setIsLoading(false);
-        setRefreshing(false);
-      })
-      .catch((error: Error) =>
-        Alert.alert('Error', `Error reading saved files: ${error.message}`),
-      );
+    if (videoController) {
+      videoController.getCapturedVideosList().then(vids => {
+        vids.forEach(vid => {
+          if (videoInfoMap.has(vid.videoId)) {
+            return; // Skip as the video has already been updated
+          }
+
+          const path = videoController.getVideoFilePath(vid.videoId);
+          setVideoInfoMap(
+            new Map(
+              videoInfoMap.set(vid.videoId, {
+                metaData: vid,
+                localPath: path,
+                thumbnail: placeholderThumbnail,
+              }),
+            ),
+          );
+
+          // Create the thumbnails
+          createThumbnail({
+            url: path,
+            timeStamp: 1000,
+          })
+            .then(thumbnail => {
+              setVideoInfoMap(
+                new Map(
+                  videoInfoMap.set(vid.videoId, {
+                    ...videoInfoMap.get(vid.videoId)!,
+                    thumbnail,
+                  }),
+                ),
+              );
+            })
+            .catch(err => {
+              console.log(vid.videoId, err);
+            });
+        });
+      });
+    }
+    setIsLoading(false);
+    setRefreshing(false);
   };
 
   useEffect(() => {
@@ -80,15 +117,15 @@ const SavedScreen = () => {
   };
 
   const deleteVideos = () => {
-    // editList.forEach(value => {
-    //   videoController?.deleteVideo(value.)
-    // });
+    editList.forEach(value => {
+      videoController?.deleteVideo(value.metaData.videoId);
+    });
   };
 
   const uploadVideos = () => {
     // Startup a waiting icon
-    editList.forEach(async value => {
-      const videoId = value.name.split('.')[0];
+    editList.forEach(async vidInfo => {
+      console.log(vidInfo.metaData.videoId);
       // await CloudVideoWriter.writeVideo(value.path, videoId).catch(
       //   (error: Error) => console.log(error),
       // );
@@ -99,7 +136,7 @@ const SavedScreen = () => {
     if (editMode) {
       toggleItemInVideoList(item);
     } else {
-      setVideoPath(item.path);
+      setVideoPath(item.localPath);
     }
   };
 
@@ -108,18 +145,16 @@ const SavedScreen = () => {
     setEditMode(true);
   };
 
-  // const renderVideoList
-
-  const renderVideoCard: ListRenderItem<VideoInfo> = ({item}) => {
+  const renderVideoIcon = (vidInfo: VideoInfo) => {
     let editIcon;
     if (editMode) {
-      const iconText = editList.includes(item)
+      const iconText = editList.includes(vidInfo)
         ? 'check-circle'
         : 'checkbox-blank-circle-outline';
       editIcon = (
         <IconButton
           icon={iconText}
-          onPress={() => toggleItemInVideoList(item)}
+          onPress={() => toggleItemInVideoList(vidInfo)}
         />
       );
     }
@@ -127,14 +162,51 @@ const SavedScreen = () => {
     return (
       <View style={styles.cardContainer}>
         {editIcon}
-        <VideoCard
-          videoName={item.name}
-          videoPath={item.path}
-          onPress={() => onVideoCardPressed(item)}
-          onLongPress={() => onVideoCardLongPressed(item)}
-        />
+        <Avatar.Image size={50} source={{uri: vidInfo.thumbnail.path}} />
       </View>
     );
+  };
+
+  const renderVideoItems = (videos: VideoInfo[]) => {
+    return videos.map((vidInfo, idx) => {
+      return (
+        <List.Item
+          title={vidInfo.metaData.createdDateTime}
+          key={idx}
+          left={() => renderVideoIcon(vidInfo)}
+          onPress={() => onVideoCardPressed(vidInfo)}
+          onLongPress={() => onVideoCardLongPressed(vidInfo)}
+        />
+      );
+    });
+  };
+
+  const renderVideoAccordions = () => {
+    let artistMap = new Map<string, VideoInfo[]>();
+    videoInfoMap.forEach(vidInfo => {
+      const artist = vidInfo.metaData.artistId
+        ? vidInfo.metaData.artistId
+        : 'Unknown';
+      if (artistMap.has(artist)) {
+        artistMap.get(artist)?.push(vidInfo);
+      } else {
+        artistMap.set(artist, [vidInfo]);
+      }
+    });
+
+    return Array.from(artistMap.keys())
+      .sort()
+      .map((artist, idx) => {
+        let vids = artistMap.get(artist);
+        if (!vids) {
+          vids = [];
+        }
+        return (
+          <List.Accordion title={artist} id={`${idx}`} key={idx}>
+            {renderVideoItems(vids)}
+          </List.Accordion>
+        );
+      });
   };
 
   const renderEditModeButtons = () => {
@@ -186,7 +258,8 @@ const SavedScreen = () => {
         <ActivityIndicator animating={isProcessing} size="large" />
         <View style={styles.accordionGroupContainer}>
           <List.AccordionGroup>
-            <List.Accordion title="Unknown" id="1">
+            {renderVideoAccordions()}
+            {/* <List.Accordion title="Unknown" id="1"> */}
               {/* <List.Item title="Item 1" /> */}
               {/* <FlatList
                 data={videosList}
@@ -196,7 +269,7 @@ const SavedScreen = () => {
                 refreshing={refreshing}
                 onRefresh={refreshVideosList}
               /> */}
-            </List.Accordion>
+            {/* </List.Accordion> */}
           </List.AccordionGroup>
         </View>
         {renderEditModeButtons()}
@@ -223,7 +296,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   cardContainer: {
-    width: '100%',
+    // width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
   },

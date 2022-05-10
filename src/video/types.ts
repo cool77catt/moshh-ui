@@ -1,9 +1,12 @@
-export interface VideoInfoType {
+export interface VideoMetaData {
   userId: string;
-  videoId: string;
   createdDateTime: Date;
-  artistId: string | undefined;
-  eventId: string | undefined;
-  track: string | undefined;
-  storageLocation: string | undefined;
+  artistId?: string;
+  eventId?: string;
+  track?: string;
+}
+
+export interface VideoDbSchema extends VideoMetaData {
+  videoId: string;
+  storageLocation?: string;
 }
