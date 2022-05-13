@@ -1,3 +1,12 @@
+import {CloudDbRecordType} from './types';
+
 export interface ICloudDb {
-  getRecords: (dbName: string) => Promise<void>;
+  createCollection: <Type>(
+    collectionName: string,
+  ) => Promise<ICloudDbCollection<Type>>;
+}
+
+export interface ICloudDbCollection<Type> {
+  nativeToDatetime: (nativeValue: any) => Date;
+  readAll: () => Promise<CloudDbRecordType<Type>[]>;
 }

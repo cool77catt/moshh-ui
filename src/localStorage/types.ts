@@ -1,4 +1,4 @@
-export type ReadDirItem = {
+export type LocalReadDirItem = {
   ctime: Date; // The creation date of the file (iOS only)
   mtime: Date; // The last modified date of the file
   name: string; // The name of the item

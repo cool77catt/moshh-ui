@@ -38,6 +38,7 @@ import {
 import VideoModal from './components/VideoModal';
 import {VideoController} from './video';
 import {RNFSFileStore, RealmDb} from './localStorage';
+import {CloudDbController, FirebaseDb} from './cloud';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -60,9 +61,16 @@ const App = () => {
   };
 
   const configureModules = async () => {
+    // setup local storage
     const localDb = new RealmDb();
     const localFileStore = await RNFSFileStore.configure();
+
+    // setup video controller
     await VideoController.configure(localFileStore!, localDb);
+
+    // setup cloud storage
+    const cloudDb = new FirebaseDb();
+    await CloudDbController.configure(cloudDb);
   };
 
   // Setup the initial connection with the firebase auth

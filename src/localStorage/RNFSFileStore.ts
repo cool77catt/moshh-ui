@@ -1,6 +1,6 @@
 import {ILocalFileStore} from './ILocalFileStore';
 import RNFS from 'react-native-fs';
-import {ReadDirItem} from './types';
+import {LocalReadDirItem} from './types';
 
 class RNFSFileStore implements ILocalFileStore {
   // Static Public class properties
@@ -35,7 +35,7 @@ class RNFSFileStore implements ILocalFileStore {
   readDirectory(dirPath: string) {
     return RNFS.readDir(dirPath).then(items => {
       return items.map(item => {
-        return item as ReadDirItem; // The ReadDirItem we are returning matches that of the RNFS module ReadDirItem type
+        return item as LocalReadDirItem; // The LocalReadDirItem we are returning matches that of the RNFS module ReadDirItem type
       });
     });
   }

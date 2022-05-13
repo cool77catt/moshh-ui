@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect, useContext} from 'react';
+import React, {useRef, useState, useEffect} from 'react';
 import {Alert, View, ViewStyle} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
@@ -12,10 +12,12 @@ import {
 import auth from '@react-native-firebase/auth';
 import {VideoController} from '../video';
 import {generateUuid} from '../utils/uuid';
+import VideoInfoModal from '../components/VideoInfoModal';
 
 const RecordScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [flashState, setFlashState] = useState<'auto' | 'on' | 'off'>('auto');
+  const [infoModalVisible, setInfoModalVisible] = useState(true);
   const cameraRef = useRef<Camera>(null);
 
   const devices = useCameraDevices();
@@ -146,26 +148,37 @@ const RecordScreen = () => {
     );
   };
 
-  const device = isFrontDevice ? devices.front : devices.back;
-  if (device == null) {
-    return <View />;
-  }
+  const renderVideoInfoModal = () => {
+    if (infoModalVisible) {
+      return <VideoInfoModal visible={infoModalVisible} />;
+    }
+  };
+
+  const renderCamera = () => {
+    const device = isFrontDevice ? devices.front : devices.back;
+    if (device) {
+      return (
+        <View style={stackedViewStyle}>
+          <Camera
+            ref={cameraRef}
+            device={device}
+            isActive={true}
+            video={true}
+            audio={true}
+            style={{
+              width: '100%',
+              height: '100%',
+            }}
+          />
+        </View>
+      );
+    }
+  };
 
   return (
     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-      <View style={stackedViewStyle}>
-        <Camera
-          ref={cameraRef}
-          device={device}
-          isActive={true}
-          video={true}
-          audio={true}
-          style={{
-            width: '100%',
-            height: '100%',
-          }}
-        />
-      </View>
+      {renderVideoInfoModal()}
+      {renderCamera()}
       <View style={buttonOverlayContainer}>
         <View style={buttonGroupStyle}>
           {renderFlashButton()}
