@@ -1,13 +1,8 @@
 import React, {useState, useContext} from 'react';
-import {StyleSheet, View, Alert} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {Text, TextInput, Button} from 'react-native-paper';
 import auth from '@react-native-firebase/auth';
-import {
-  UserDbRecordType,
-  addUserHandleToDatabase,
-  getUserInfo,
-  FS_ERR_CODE_HANDLE_UNAVAILABLE,
-} from '../utils/firestoreDb';
+import {UserController} from '../controllers';
 import {GlobalContext} from '../contexts';
 
 // TODO test handle with different capitalization
@@ -18,6 +13,7 @@ const CreateUserScreen = () => {
   const [handleText, setHandleText] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const userController = UserController.getInstance();
   const currentUser = auth().currentUser;
 
   const handleInputChange = (text: string) => {
@@ -31,17 +27,18 @@ const CreateUserScreen = () => {
   };
 
   const setHandle = () => {
-    addUserHandleToDatabase(currentUser!.uid, handleText)
+    userController
+      ?.addUserHandleToDatabase(currentUser!.uid, handleText)
       .then(() => {
         // Success
-        getUserInfo(currentUser!.uid).then((val: UserDbRecordType) =>
-          context.setUserInfo?.(val),
-        );
+        userController?.readUserInfo(currentUser!.uid).then(val => {
+          if (val) {
+            context.setUserInfo?.(val);
+          }
+        });
       })
       .catch(err => {
-        if (err.code === FS_ERR_CODE_HANDLE_UNAVAILABLE) {
-          setErrorMsg(err.message);
-        }
+        setErrorMsg(err.message);
       });
   };
 

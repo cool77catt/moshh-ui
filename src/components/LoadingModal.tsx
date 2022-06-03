@@ -4,14 +4,16 @@ import {Modal, ActivityIndicator, Portal} from 'react-native-paper';
 
 export type LodaingModalProps = {
   isVisible: boolean;
+  message?: string;
 };
 
-const LoadingModal = ({isVisible}: LodaingModalProps) => {
-  if (isVisible) {
+const LoadingModal = (props: LodaingModalProps) => {
+  if (props.isVisible) {
     return (
       <Portal>
         <Modal visible={true} dismissable={false} style={styles.container}>
-          <ActivityIndicator animating={true} />
+          <ActivityIndicator animating={true} size="large" />
+          <Text style={styles.message}>{props.message}</Text>
         </Modal>
       </Portal>
     );
@@ -33,6 +35,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 40,
     // borderWidth: 2,
     backgroundColor: 'white',
+  },
+  message: {
+    textAlign: 'center',
+    fontSize: 20,
+    padding: 12,
   },
 });
 

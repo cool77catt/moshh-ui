@@ -30,22 +30,16 @@ import {
 } from './screens';
 import MoshhIcon from './components/MoshhIcon';
 import {GlobalContext, GlobalContextType} from './contexts';
-import {
-  UserDbRecordType,
-  getUserInfo,
-  setDefaultUserInfo,
-} from './utils/firestoreDb';
 import VideoModal from './components/VideoModal';
-import {VideoController} from './video';
+import {VideoController, UserController, UserInfo} from './controllers';
 import {RNFSFileStore, RealmDb} from './localStorage';
-import {CloudDbController, FirebaseDb} from './cloud';
+import {CloudDbController, FirebaseDb, GCPCloudStorage} from './cloud';
 
 const Tab = createMaterialBottomTabNavigator();
 
 const App = () => {
   // Setup state variables
-  const [currentUserInfo, setCurrentUserInfo] =
-    useState<UserDbRecordType | null>(null);
+  const [currentUserInfo, setCurrentUserInfo] = useState<UserInfo | null>(null);
   // const [userHandleValid, setUserHandleValid] = useState<boolean>(false);
   // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
   const [isConnected, setIsConnected] = useState(false);
@@ -65,12 +59,22 @@ const App = () => {
     const localDb = new RealmDb();
     const localFileStore = await RNFSFileStore.configure();
 
-    // setup video controller
-    await VideoController.configure(localFileStore!, localDb);
-
     // setup cloud storage
     const cloudDb = new FirebaseDb();
     await CloudDbController.configure(cloudDb);
+
+    // setup the user controller
+    const userController = await UserController.configure(cloudDb);
+
+    // setup video controller
+    const cloudStorage = new GCPCloudStorage();
+    await VideoController.configure(
+      localFileStore!,
+      localDb,
+      cloudStorage,
+      cloudDb,
+      userController!,
+    );
   };
 
   // Setup the initial connection with the firebase auth
@@ -91,12 +95,19 @@ const App = () => {
         setCurrentUserInfo(null);
       } else {
         console.log('User Id:', user.uid);
-        getUserInfo(user.uid)
-          .then((data: UserDbRecordType) => {
+        const userController = UserController.getInstance();
+        userController
+          ?.readUserInfo(user.uid)
+          .then(data => {
             if (!data) {
-              setDefaultUserInfo(user.uid)
-                .then((defaultData: UserDbRecordType) => {
-                  setCurrentUserInfo(defaultData);
+              userController
+                .setDefaultUserInfo(user.uid)
+                .then(defaultData => {
+                  if (defaultData) {
+                    setCurrentUserInfo(defaultData);
+                  } else {
+                    throw new Error(`Default data is ${defaultData}`);
+                  }
                 })
                 .catch(err =>
                   console.log('Error setting default user data', err.message),

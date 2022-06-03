@@ -33,6 +33,7 @@ class RNFSFileStore implements ILocalFileStore {
   }
 
   readDirectory(dirPath: string) {
+    console.log('read', dirPath);
     return RNFS.readDir(dirPath).then(items => {
       return items.map(item => {
         return item as LocalReadDirItem; // The LocalReadDirItem we are returning matches that of the RNFS module ReadDirItem type

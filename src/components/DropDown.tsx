@@ -1,6 +1,5 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {StyleSheet, View} from 'react-native';
-import {Button} from 'react-native-paper';
 import RNPDropDown from 'react-native-paper-dropdown';
 
 export type DropDownValue = string | number;
@@ -14,6 +13,12 @@ interface DropDownProps {
 
 const DropDown = (props: DropDownProps) => {
   const [showDropDown, setShowDropDown] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      setShowDropDown(false);
+    };
+  }, []);
 
   const onValueChanged = (val: DropDownValue) => {
     setShowDropDown(false);
@@ -38,7 +43,8 @@ const DropDown = (props: DropDownProps) => {
 
 const styles = StyleSheet.create({
   mainContainer: {
-    width: '90%',
+    width: '100%',
+    paddingBottom: 8,
   },
 });
 

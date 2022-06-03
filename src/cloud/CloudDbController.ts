@@ -1,6 +1,11 @@
 import {ICloudDb, ICloudDbCollection} from './ICloudDb';
 import {CloudDbRecordType, CloudDbArtistType, CloudDbEventType} from './types';
 
+// TODO - create a separate artist contorller
+// TODO  create a separate event controler
+// TODO - delete the cloud db controller
+// TODO - create a cloud controller that will contain all the various cloud controllers, so only have to pass the single object.  Then the obect using it can just reference the specific cotroller it needs.
+
 class CloudDbController {
   // static public class properties
   static ARTIST_COLLECTION_NAME = 'Artists';
@@ -43,10 +48,35 @@ class CloudDbController {
     let artists = await this._artistCollection?.readAll();
     if (sorted) {
       artists?.sort((a, b) =>
-        a.data.name_lowercase.localeCompare(b.data.name_lowercase),
+        a.data.nameLowercase.localeCompare(b.data.nameLowercase),
       );
     }
     return artists;
+  }
+
+  async getArtistInfo(artistId: string) {
+    return this._artistCollection?.readOne(artistId);
+  }
+
+  async addNewArtist(name: string) {
+    let nameLowercase = name.toLowerCase();
+    if (!this._artistCollection) {
+      return null;
+    }
+    return this._artistCollection
+      .readFilterOne('nameLowercase', '==', nameLowercase)
+      .then(rec => {
+        if (!rec) {
+          // Artist does not exist
+          return this._artistCollection!.create({
+            name,
+            nameLowercase,
+          });
+        } else {
+          // Artist already exists
+          return rec;
+        }
+      });
   }
 
   async getEvents() {
@@ -65,6 +95,30 @@ class CloudDbController {
         };
       }) as CloudDbRecordType<CloudDbEventType>[];
     });
+  }
+
+  async addNewEvent(name: string, location: string, datetime: Date) {
+    let nameLowercase = name.toLowerCase();
+    if (!this._eventCollection) {
+      return null;
+    }
+
+    return this._eventCollection
+      .readFilterOne('nameLowercase', '==', nameLowercase)
+      .then(rec => {
+        if (!rec) {
+          // Event does not exist
+          return this._eventCollection!.create({
+            name,
+            nameLowercase,
+            location,
+            datetime,
+          });
+        } else {
+          // Event already exists
+          return rec;
+        }
+      });
   }
 }
 

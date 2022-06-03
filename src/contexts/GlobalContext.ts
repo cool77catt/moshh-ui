@@ -1,10 +1,10 @@
 import React from 'react';
-import {UserDbRecordType} from '../utils/firestoreDb';
+import {UserInfo} from '../controllers';
 import VideoModal from '../components/VideoModal';
 
 export type GlobalContextType = {
-  userInfo?: UserDbRecordType | null;
-  setUserInfo?: (record: UserDbRecordType) => void;
+  userInfo?: UserInfo | null;
+  setUserInfo?: (record: UserInfo) => void;
   signOutUser?: () => void;
   videoModalRef?: React.MutableRefObject<VideoModal | null>;
   setVideoModalRef?: (ref: VideoModal) => void;

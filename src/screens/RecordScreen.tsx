@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect} from 'react';
+import React, {useRef, useState, useEffect, useContext} from 'react';
 import {Alert, View, ViewStyle} from 'react-native';
 import {IconButton, Colors} from 'react-native-paper';
 import {useNavigation} from '@react-navigation/native';
@@ -9,19 +9,24 @@ import {
   useCameraDevices,
   VideoFileType,
 } from 'react-native-vision-camera';
-import auth from '@react-native-firebase/auth';
-import {VideoController} from '../video';
+// import auth from '@react-native-firebase/auth';
+import {VideoController, VideoMetaData} from '../controllers';
 import {generateUuid} from '../utils/uuid';
-import VideoInfoModal from '../components/VideoInfoModal';
+import VideoInfoInputDialog, {
+  VideoInfo,
+} from '../components/VideoInfoInputDialog';
+import {GlobalContext} from '../contexts';
 
 const RecordScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [flashState, setFlashState] = useState<'auto' | 'on' | 'off'>('auto');
-  const [infoModalVisible, setInfoModalVisible] = useState(true);
+  const [infoDialogVisible, setInfoDialogVisible] = useState(false);
+  const videoFileRef = useRef<VideoFile>();
   const cameraRef = useRef<Camera>(null);
 
   const devices = useCameraDevices();
   const [isFrontDevice, setIsFrontDevice] = useState(false);
+  const globalContext = useContext(GlobalContext);
 
   // Stop Recording callback
 
@@ -50,21 +55,31 @@ const RecordScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
-  const saveVideo = (video: VideoFile) => {
-    const videoId = generateUuid();
-    VideoController.getInstance()?.saveVideo(
-      video.path,
-      videoId,
-      auth().currentUser!.uid,
-    );
+  const saveVideo = (videoInfo: VideoInfo | null = null) => {
+    if (videoFileRef) {
+      const videoId = generateUuid();
+      const videoMetaData: VideoMetaData = {
+        videoId,
+        userId: globalContext.userInfo!._id,
+        createdDateTime: new Date(),
+        artistId: videoInfo?.artistId,
+        eventId: videoInfo?.eventId,
+        track: videoInfo?.track,
+      };
+
+      VideoController.getInstance()
+        ?.saveVideo(videoFileRef.current!.path, videoId, videoMetaData)
+        .then(() => setInfoDialogVisible(false));
+    }
   };
 
   const recordingFinished = (video: VideoFile) => {
     // Prompt user if they want to save
+    videoFileRef.current = video;
     Alert.alert('Save', 'Do you wish to save this video?', [
       {
         text: 'Yes',
-        onPress: () => saveVideo(video),
+        onPress: () => setInfoDialogVisible(true),
       },
       {text: 'No'},
     ]);
@@ -148,12 +163,6 @@ const RecordScreen = () => {
     );
   };
 
-  const renderVideoInfoModal = () => {
-    if (infoModalVisible) {
-      return <VideoInfoModal visible={infoModalVisible} />;
-    }
-  };
-
   const renderCamera = () => {
     const device = isFrontDevice ? devices.front : devices.back;
     if (device) {
@@ -177,7 +186,11 @@ const RecordScreen = () => {
 
   return (
     <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-      {renderVideoInfoModal()}
+      <VideoInfoInputDialog
+        visible={infoDialogVisible}
+        okPressed={videoInfo => saveVideo(videoInfo)}
+        cancelPressed={() => saveVideo()}
+      />
       {renderCamera()}
       <View style={buttonOverlayContainer}>
         <View style={buttonGroupStyle}>

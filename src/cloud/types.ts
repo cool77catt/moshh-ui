@@ -5,11 +5,14 @@ export interface CloudDbRecordType<Type> {
 
 export interface CloudDbArtistType {
   name: string;
-  name_lowercase: string;
+  nameLowercase: string;
 }
 
 export interface CloudDbEventType {
   name: string;
+  nameLowercase: string;
   location: string;
   datetime: Date;
 }
+
+export type CloudDbFilterOperand = '==' | '<=' | '>=' | '<' | '>' | '!=' | 'in';
