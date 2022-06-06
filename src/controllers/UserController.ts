@@ -102,7 +102,11 @@ class UserController {
           // Remove the video id and update
           videos = videos.filter(v => v !== videoId);
           await this._userDbCollection!.update(userId, {videos});
+        } else {
+          console.log('id not found in the videos', videoId);
         }
+      } else {
+        console.log('Error removing video from user.  Rec not found');
       }
     }
   }

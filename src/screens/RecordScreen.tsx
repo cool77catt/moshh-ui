@@ -28,6 +28,8 @@ const RecordScreen = () => {
   const [isFrontDevice, setIsFrontDevice] = useState(false);
   const globalContext = useContext(GlobalContext);
 
+  console.log('devices', devices);
+
   // Stop Recording callback
 
   // Setup actions to perform when focus is entered/exited

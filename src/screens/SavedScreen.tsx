@@ -87,12 +87,14 @@ const SavedScreen = () => {
       createThumbnail({
         url: vidInfo.localPath,
         timeStamp: 1000,
-      }).then(thumbnail => {
-        newMap.set(key, {
-          ...vidInfo,
-          thumbnail,
-        });
-      }),
+      })
+        .then(thumbnail => {
+          newMap.set(key, {
+            ...vidInfo,
+            thumbnail,
+          });
+        })
+        .catch(err => console.log('Error creating thumbnail:', err)),
     );
 
     // wait for all promises to finish
@@ -176,15 +178,28 @@ const SavedScreen = () => {
     updateEditList(item);
   };
 
-  const deleteVideos = (fromCloud: boolean) => {
-    editList.forEach(vidInfo => {
+  const deleteVideos = async (fromCloud: boolean) => {
+    setIsProcessing(true);
+
+    // Loop through the videos.  Note, this is done in series because
+    // it was discovered that doing that in parallel was screwing up the
+    // record keeping of the user videos in firebase, the way they were updating
+    // the users video list, they were not syncronized.
+    for (const vidInfo of editList) {
       console.log('delete', vidInfo.metaData.videoId);
-      videoController!.deleteVideo(
-        globalContext.userInfo!._id,
-        vidInfo.metaData.videoId,
-        fromCloud,
-      );
-    });
+      await videoController!
+        .deleteVideo(
+          globalContext.userInfo!._id,
+          vidInfo.metaData.videoId,
+          fromCloud,
+        )
+        .catch(err =>
+          console.log('error deleting video', vidInfo.metaData.videoId, err),
+        );
+    }
+    setIsProcessing(false);
+    exitEditMode();
+    await refreshAll();
   };
 
   const promptDeleteVideos = () => {
@@ -206,21 +221,26 @@ const SavedScreen = () => {
   const uploadVideos = async () => {
     if (videoController && globalContext.userInfo) {
       setIsProcessing(true);
-      Promise.all(
-        editList.map(async vidInfo => {
-          if (!vidInfo.isUploaded) {
-            return videoController.uploadVideo(
-              globalContext.userInfo!._id,
-              vidInfo.metaData,
-              vidInfo.localPath,
-            );
-          }
-        }),
-      ).then(async () => {
-        exitEditMode();
-        await refreshAll();
-        setIsProcessing(false);
-      });
+
+      // Loop through the videos.  Note, this is done in series because
+      // it was discovered that doing that in parallel was screwing up the
+      // record keeping of the user videos in firebase, the way they were updating
+      // the users video list, they were not syncronized.
+      for (const vidInfo of editList) {
+        if (!vidInfo.isUploaded) {
+          await videoController.uploadVideo(
+            globalContext.userInfo!._id,
+            vidInfo.metaData,
+            vidInfo.localPath,
+          );
+        } else {
+          console.log('video upload already done', vidInfo.metaData.videoId);
+        }
+      }
+
+      exitEditMode();
+      await refreshAll();
+      setIsProcessing(false);
     }
   };
 

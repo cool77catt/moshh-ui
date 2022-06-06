@@ -8,18 +8,17 @@ export type LodaingModalProps = {
 };
 
 const LoadingModal = (props: LodaingModalProps) => {
-  if (props.isVisible) {
-    return (
-      <Portal>
-        <Modal visible={true} dismissable={false} style={styles.container}>
-          <ActivityIndicator animating={true} size="large" />
-          <Text style={styles.message}>{props.message}</Text>
-        </Modal>
-      </Portal>
-    );
-  }
-
-  return null;
+  return (
+    <Portal>
+      <Modal
+        visible={props.isVisible}
+        dismissable={false}
+        style={styles.container}>
+        <ActivityIndicator animating={true} size="large" />
+        <Text style={styles.message}>{props.message}</Text>
+      </Modal>
+    </Portal>
+  );
 };
 
 const styles = StyleSheet.create({

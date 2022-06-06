@@ -27,6 +27,7 @@ class VideoController {
   _cloudDb: ICloudDb;
   _cloudDbCollection: ICloudDbCollection<VideoMetaData> | null = null;
   _userController: UserController;
+  _currentUserId?: string;
 
   static getInstance() {
     return this._instance;
@@ -67,6 +68,14 @@ class VideoController {
     this._userController = userController;
   }
 
+  async setCurrentUserId(userId: string) {
+    this._currentUserId = userId;
+    if (this._localFileStore) {
+      await this._localFileStore.makeDirectory(this.getUserDirPath(userId));
+      await this._localFileStore.makeDirectory(this.getVideoDirPath(userId));
+    }
+  }
+
   async setupLocalDbCollection() {
     if (this._localDb) {
       this._localDbCollection = await this._localDb.createCollection(
@@ -83,8 +92,12 @@ class VideoController {
     }
   }
 
+  getUserDirPath(userId: string) {
+    return `${this._localFileStore?.documentDirectoryPath()}/${userId}`;
+  }
+
   getVideoDirPath(userId: string) {
-    return `${this._localFileStore?.documentDirectoryPath()}/${userId}/${
+    return `${this.getUserDirPath(userId)}/${
       VideoController.DEFAULT_VIDEO_DIRECTORY
     }`;
   }

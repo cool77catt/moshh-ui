@@ -94,7 +94,7 @@ const VideoInfoInputDialog = (props: Props) => {
   };
 
   const cancelPressed = () => {
-    console.log('Cancel pressed');
+    props.cancelPressed();
   };
 
   const artistSelected = (val: DropDownValue) => {

@@ -77,6 +77,13 @@ const App = () => {
     );
   };
 
+  const currentUserChanged = async (user: UserInfo | null) => {
+    setCurrentUserInfo(user);
+    if (user) {
+      VideoController.getInstance()?.setCurrentUserId(user._id);
+    }
+  };
+
   // Setup the initial connection with the firebase auth
   useEffect(() => {
     // Load the resources
@@ -89,10 +96,10 @@ const App = () => {
       }
 
       if (!user) {
-        setCurrentUserInfo(null);
+        currentUserChanged(null);
       } else if (!user.email) {
         Alert.alert('Error', 'User has no email address...');
-        setCurrentUserInfo(null);
+        currentUserChanged(null);
       } else {
         console.log('User Id:', user.uid);
         const userController = UserController.getInstance();
@@ -104,7 +111,7 @@ const App = () => {
                 .setDefaultUserInfo(user.uid)
                 .then(defaultData => {
                   if (defaultData) {
-                    setCurrentUserInfo(defaultData);
+                    currentUserChanged(defaultData);
                   } else {
                     throw new Error(`Default data is ${defaultData}`);
                   }
@@ -113,13 +120,13 @@ const App = () => {
                   console.log('Error setting default user data', err.message),
                 );
             } else {
-              setCurrentUserInfo(data);
+              currentUserChanged(data);
             }
           })
           .catch(err => {
             console.log(err.message);
             Alert.alert('Error', `Error getting user info ${err.message}`);
-            setCurrentUserInfo(null);
+            currentUserChanged(null);
           });
       }
     });
@@ -131,7 +138,7 @@ const App = () => {
   const performLogout = () => {
     auth()
       .signOut()
-      .then(() => setCurrentUserInfo(null))
+      .then(() => currentUserChanged(null))
       .catch((err: Error) => {
         Alert.alert('Error', `Error logging out: ${err.message}`);
       });
@@ -140,7 +147,7 @@ const App = () => {
   // Setup the global context
   const globalContextValue: GlobalContextType = {
     userInfo: currentUserInfo,
-    setUserInfo: setCurrentUserInfo,
+    setUserInfo: currentUserChanged,
     signOutUser: performLogout,
     videoModalRef: videoModalRef,
     setVideoModalRef: ref => (videoModalRef.current = ref),
