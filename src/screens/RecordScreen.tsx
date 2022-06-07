@@ -24,7 +24,7 @@ const RecordScreen = () => {
   const videoFileRef = useRef<VideoFile>();
   const cameraRef = useRef<Camera>(null);
 
-  const devices = useCameraDevices();
+  const devices = useCameraDevices('wide-angle-camera');
   const [isFrontDevice, setIsFrontDevice] = useState(false);
   const globalContext = useContext(GlobalContext);
 
@@ -57,7 +57,7 @@ const RecordScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigation]);
 
-  const saveVideo = (videoInfo: VideoInfo | null = null) => {
+  const saveVideo = async (videoInfo: VideoInfo | null = null) => {
     if (videoFileRef) {
       const videoId = generateUuid();
       const videoMetaData: VideoMetaData = {
@@ -69,22 +69,23 @@ const RecordScreen = () => {
         track: videoInfo?.track,
       };
 
-      VideoController.getInstance()
-        ?.saveVideo(videoFileRef.current!.path, videoId, videoMetaData)
-        .then(() => setInfoDialogVisible(false));
+      const videoController = VideoController.getInstance();
+      if (videoController) {
+        videoController
+          .saveVideo(videoFileRef.current!.path, videoId, videoMetaData)
+          .catch(err => console.log('error saving video', err))
+          .finally(() => setInfoDialogVisible(false));
+
+        // Upload (don't wait for it to finish before clearing the info dialog)
+        videoController.uploadVideo(videoMetaData.userId, videoMetaData);
+      }
     }
   };
 
   const recordingFinished = (video: VideoFile) => {
     // Prompt user if they want to save
     videoFileRef.current = video;
-    Alert.alert('Save', 'Do you wish to save this video?', [
-      {
-        text: 'Yes',
-        onPress: () => setInfoDialogVisible(true),
-      },
-      {text: 'No'},
-    ]);
+    setInfoDialogVisible(true);
   };
 
   // Handle Record Control

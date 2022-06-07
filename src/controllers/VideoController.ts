@@ -222,11 +222,9 @@ class VideoController {
     return results;
   }
 
-  async uploadVideo(
-    userId: string,
-    metaData: VideoMetaData,
-    localPath: string,
-  ) {
+  async uploadVideo(userId: string, metaData: VideoMetaData) {
+    const localPath = this.getVideoFilePath(userId, metaData.videoId);
+
     // Save to storage
     console.log('saving', metaData.videoId);
     const dstPath = this.getVideoCloudFilePath(metaData.videoId);

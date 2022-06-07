@@ -231,7 +231,6 @@ const SavedScreen = () => {
           await videoController.uploadVideo(
             globalContext.userInfo!._id,
             vidInfo.metaData,
-            vidInfo.localPath,
           );
         } else {
           console.log('video upload already done', vidInfo.metaData.videoId);
