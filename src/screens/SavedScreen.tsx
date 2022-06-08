@@ -250,7 +250,7 @@ const SavedScreen = () => {
           ...item.metaData,
           ...videoInfo,
         };
-        await videoController?.setVideoMetaData(metaData.videoId, metaData);
+        await videoController?.setVideoMetaData(metaData);
       }
 
       refreshAll();

@@ -20,3 +20,6 @@ export interface VideoMetaData {
   eventId?: string | null;
   track?: string | null;
 }
+export interface VideoLocalMetaData extends VideoMetaData {
+  localFilepath: string;
+}

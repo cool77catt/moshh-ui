@@ -54,6 +54,8 @@
 	<string></string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Moshh requires access to your phone’s Microphone.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Moshh requires access to your video library.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>MaterialIcons.ttf</string>

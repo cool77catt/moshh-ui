@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import {VideoMetaData} from './types';
 import {ILocalFileStore, ILocalDb, ILocalDbCollection} from '../localStorage';
 import {
@@ -7,6 +8,9 @@ import {
   ICloudStorageBucket,
 } from '../cloud';
 import UserController from './UserController';
+import {generateUUID} from '../utils/uuid';
+
+let MovToMp4 = require('react-native-mov-to-mp4'); // Use "require" instead of "import" because there is no type file for this module
 
 class VideoController {
   // static public class properties
@@ -66,6 +70,10 @@ class VideoController {
     this._cloudBucket = cloudStorage.getBucket();
     this._cloudDb = cloudDb;
     this._userController = userController;
+  }
+
+  static generateNewId() {
+    return generateUUID();
   }
 
   async setCurrentUserId(userId: string) {
@@ -129,16 +137,6 @@ class VideoController {
     return results;
   }
 
-  async saveVideo(srcPath: string, videoId: string, metaData: VideoMetaData) {
-    // Compile the destination filename path
-    const newFilepath = this.getVideoFilePath(metaData.userId, videoId);
-
-    // Save the file
-    return this._localFileStore?.saveFile(srcPath, newFilepath)?.then(() => {
-      return this.setVideoMetaData(videoId, metaData);
-    });
-  }
-
   async getVideoMetaData(videoId: string) {
     let results: VideoMetaData | null = null;
     const recordString = await this._localDbCollection?.read(videoId);
@@ -151,10 +149,10 @@ class VideoController {
     return results;
   }
 
-  async setVideoMetaData(videoId: string, metaData: VideoMetaData) {
+  async setVideoMetaData(metaData: VideoMetaData) {
     let dbRecord: VideoMetaData | null = null;
 
-    let existingMeta = await this.getVideoMetaData(videoId);
+    let existingMeta = await this.getVideoMetaData(metaData.videoId);
     if (existingMeta) {
       dbRecord = {
         ...existingMeta,
@@ -164,21 +162,10 @@ class VideoController {
       dbRecord = metaData;
     }
 
-    return this._localDbCollection?.write(videoId, JSON.stringify(dbRecord));
-  }
-
-  async isVideoUploaded(videoId: string) {
-    let result = false;
-
-    // Check if the record exists
-    if (this._cloudDbCollection) {
-      const rec = await this._cloudDbCollection.readOne(videoId);
-      if (rec && rec.data) {
-        result = true;
-      }
-    }
-
-    return result;
+    return this._localDbCollection?.write(
+      metaData.videoId,
+      JSON.stringify(dbRecord),
+    );
   }
 
   async getCapturedVideosList(userId: string) {
@@ -220,6 +207,39 @@ class VideoController {
     }
 
     return results;
+  }
+
+  async saveVideo(srcPath: string, metaData: VideoMetaData) {
+    const extension = _.last(srcPath.split('.'));
+    const dstFilepath = this.getVideoFilePath(
+      metaData.userId,
+      metaData.videoId,
+      'mp4',
+    );
+    let promise;
+    if (extension && extension.toLowerCase() === 'mov') {
+      // Convert to mp4
+      promise = MovToMp4.convertMovToMp4(srcPath, dstFilepath);
+    } else {
+      promise = this._localFileStore?.saveFile(srcPath, dstFilepath);
+    }
+    // const promise = this._localFileStore?.saveFile(srcPath, dstFilepath);
+
+    return promise?.then(() => this.setVideoMetaData(metaData));
+  }
+
+  async isVideoUploaded(videoId: string) {
+    let result = false;
+
+    // Check if the record exists
+    if (this._cloudDbCollection) {
+      const rec = await this._cloudDbCollection.readOne(videoId);
+      if (rec && rec.data) {
+        result = true;
+      }
+    }
+
+    return result;
   }
 
   async uploadVideo(userId: string, metaData: VideoMetaData) {
