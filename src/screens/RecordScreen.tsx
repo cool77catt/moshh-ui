@@ -3,7 +3,7 @@ import {Alert, View, StyleSheet} from 'react-native';
 import {Button, Switch, Text} from 'react-native-paper';
 import {launchCamera, Asset} from 'react-native-image-picker';
 // import auth from '@react-native-firebase/auth';
-import {VideoController, VideoMetaData} from '../controllers';
+import {VideoController, VideoLocalMetaData} from '../controllers';
 import VideoInfoInputDialog, {
   VideoInfo,
 } from '../components/VideoInfoInputDialog';
@@ -20,7 +20,7 @@ const RecordScreen = () => {
 
   const saveVideo = async (videoInfo: VideoInfo | null = null) => {
     if (videoFileRef) {
-      const videoMetaData: VideoMetaData = {
+      const videoMetaData: VideoLocalMetaData = {
         videoId: VideoController.generateNewId(),
         userId: globalContext.userInfo!._id,
         createdDateTime: new Date(),
@@ -34,7 +34,7 @@ const RecordScreen = () => {
         processingMessage.current = 'Saving file...';
         setIsProcessing(true);
         await videoController
-          .saveVideo(videoFileRef.current!.uri!, videoMetaData)
+          .saveVideoLocally(videoFileRef.current!.uri!, videoMetaData)
           .catch(err => Alert.alert('Error', `Error saving video ${err}`))
           .finally(() => {
             setIsProcessing(false);

@@ -15,15 +15,16 @@ import LoadingModal from '../components/LoadingModal';
 import VideoInfoInputDialog, {
   VideoInfo,
 } from '../components/VideoInfoInputDialog';
-import {VideoController, VideoMetaData} from '../controllers';
+import {VideoController, VideoLocalMetaData} from '../controllers';
 import {CloudDbController, CloudDbArtistType} from '../cloud';
+
+// TODO - rmove local filepath from metadata whens aving to cloud
 
 const UNKNOWN_LABEL = '[Unknown]';
 
 const placeholderThumbnail = require('../static/img/placeholder.jpeg');
 type _LocalVideoInfo = {
-  metaData: VideoMetaData;
-  localPath: string;
+  metaData: VideoLocalMetaData;
   thumbnail: Thumbnail;
   isUploaded: boolean;
 };
@@ -51,14 +52,12 @@ const SavedScreen = () => {
     if (videoController && globalContext.userInfo) {
       const userId = globalContext.userInfo._id;
 
-      const vids = await videoController.getCapturedVideosList(userId);
+      const vids = await videoController.getAllUserVideos(userId);
       await Promise.all(
         vids.map(async vid => {
-          const isUploaded = await videoController.isVideoUploaded(vid.videoId);
-          const path = videoController.getVideoFilePath(userId, vid.videoId);
+          const isUploaded = await videoController.isVideoUploaded(vid);
           results.set(vid.videoId, {
             metaData: vid,
-            localPath: path,
             thumbnail: placeholderThumbnail,
             isUploaded,
           });
@@ -83,19 +82,25 @@ const SavedScreen = () => {
   const refreshThumbnails = async (videoMap: Map<string, _LocalVideoInfo>) => {
     // Create a new map as a temporary buffer before setting the whole thing
     let newMap = new Map<string, _LocalVideoInfo>();
-    const promises = Array.from(videoMap).map(async ([key, vidInfo]) =>
-      createThumbnail({
-        url: vidInfo.localPath,
-        timeStamp: 1000,
-      })
-        .then(thumbnail => {
-          newMap.set(key, {
-            ...vidInfo,
-            thumbnail,
-          });
-        })
-        .catch(err => console.log('Error creating thumbnail:', err)),
-    );
+    const promises = Array.from(videoMap).map(async ([key, vidInfo]) => {
+      let newThumbnail;
+      if (vidInfo.metaData.localFilepath) {
+        newThumbnail = await createThumbnail({
+          url: vidInfo.metaData.localFilepath,
+          timeStamp: 1000,
+        }).catch(err => console.log('Error creating thumbnail:', err));
+      }
+
+      let updatedInfo = {...vidInfo};
+      if (newThumbnail) {
+        updatedInfo = {
+          ...updatedInfo,
+          thumbnail: newThumbnail,
+        };
+      }
+
+      newMap.set(key, updatedInfo);
+    });
 
     // wait for all promises to finish
     await Promise.all(promises);
@@ -188,11 +193,7 @@ const SavedScreen = () => {
     for (const vidInfo of editList) {
       console.log('delete', vidInfo.metaData.videoId);
       await videoController!
-        .deleteVideo(
-          globalContext.userInfo!._id,
-          vidInfo.metaData.videoId,
-          fromCloud,
-        )
+        .deleteVideo(vidInfo.metaData, fromCloud)
         .catch(err =>
           console.log('error deleting video', vidInfo.metaData.videoId, err),
         );
@@ -246,11 +247,11 @@ const SavedScreen = () => {
   const setVideoInfo = async (videoInfo: VideoInfo | null = null) => {
     if (videoInfo) {
       for (const item of editList) {
-        const metaData: VideoMetaData = {
+        const metaData: VideoLocalMetaData = {
           ...item.metaData,
           ...videoInfo,
         };
-        await videoController?.setVideoMetaData(metaData);
+        await videoController?.writeLocalMetaData(metaData);
       }
 
       refreshAll();
@@ -263,8 +264,13 @@ const SavedScreen = () => {
   const onVideoCardPressed = (item: _LocalVideoInfo) => {
     if (editMode) {
       toggleItemInVideoList(item);
+    } else if (!item.metaData.localFilepath) {
+      Alert.alert(
+        'Future',
+        'Video lives in cloud only - will support in future release',
+      );
     } else {
-      setVideoPath(item.localPath);
+      setVideoPath(item.metaData.localFilepath);
     }
   };
 
@@ -346,8 +352,8 @@ const SavedScreen = () => {
       .sort()
       .concat(UNKNOWN_LABEL);
 
-    return sortedArtists.map((artistId, idx) => {
-      let vids = groupedArtistMap.get(artistId);
+    return sortedArtists.map((artist, idx) => {
+      let vids = groupedArtistMap.get(artist);
       if (!vids) {
         vids = [];
       }
@@ -360,7 +366,7 @@ const SavedScreen = () => {
       // Render
       return (
         <List.Accordion
-          title={artistId}
+          title={artist}
           titleStyle={styles.accordionSectionHeader}
           id={`${idx}`}
           key={idx}>

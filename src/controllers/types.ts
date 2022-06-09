@@ -21,5 +21,5 @@ export interface VideoMetaData {
   track?: string | null;
 }
 export interface VideoLocalMetaData extends VideoMetaData {
-  localFilepath: string;
+  localFilepath?: string;
 }

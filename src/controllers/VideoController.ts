@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import {VideoMetaData} from './types';
+import {VideoMetaData, VideoLocalMetaData} from './types';
 import {ILocalFileStore, ILocalDb, ILocalDbCollection} from '../localStorage';
 import {
   ICloudDb,
@@ -9,8 +9,6 @@ import {
 } from '../cloud';
 import UserController from './UserController';
 import {generateUUID} from '../utils/uuid';
-
-let MovToMp4 = require('react-native-mov-to-mp4'); // Use "require" instead of "import" because there is no type file for this module
 
 class VideoController {
   // static public class properties
@@ -129,19 +127,33 @@ class VideoController {
     return `${this.getVideoCloudRoot(videoId)}/${videoId}.${extension}`;
   }
 
-  stringToMetaData(metaDataStr: string) {
-    let results = JSON.parse(metaDataStr) as VideoMetaData;
-
-    // Convert the created datetime to a Date object, as it comes out as a string
-    results.createdDateTime = new Date(results.createdDateTime);
-    return results;
+  convertMetaDataTimestamps(metaData: VideoLocalMetaData | VideoMetaData) {
+    metaData.createdDateTime = new Date(metaData.createdDateTime);
+    return metaData;
   }
 
-  async getVideoMetaData(videoId: string) {
-    let results: VideoMetaData | null = null;
+  formatMetaDataFromCloud(metaData: VideoMetaData) {
+    if (this._cloudDbCollection) {
+      metaData.createdDateTime = this._cloudDbCollection?.nativeToDatetime(
+        metaData.createdDateTime,
+      );
+    }
+    return metaData;
+  }
+
+  stringToLocalMetaData(metaDataStr: string) {
+    let metaData = JSON.parse(metaDataStr) as VideoLocalMetaData;
+
+    // Convert the created datetime to a Date object, as it comes out as a string
+    metaData = this.convertMetaDataTimestamps(metaData);
+    return metaData;
+  }
+
+  async readLocalMetaData(videoId: string) {
+    let results: VideoLocalMetaData | null = null;
     const recordString = await this._localDbCollection?.read(videoId);
     if (recordString) {
-      results = this.stringToMetaData(recordString);
+      results = this.stringToLocalMetaData(recordString);
 
       // Convert the created datetime to a Date object, as it comes out as a string
       results.createdDateTime = new Date(results.createdDateTime);
@@ -149,10 +161,10 @@ class VideoController {
     return results;
   }
 
-  async setVideoMetaData(metaData: VideoMetaData) {
-    let dbRecord: VideoMetaData | null = null;
+  async writeLocalMetaData(metaData: VideoLocalMetaData) {
+    let dbRecord: VideoLocalMetaData | null = null;
 
-    let existingMeta = await this.getVideoMetaData(metaData.videoId);
+    let existingMeta = await this.readLocalMetaData(metaData.videoId);
     if (existingMeta) {
       dbRecord = {
         ...existingMeta,
@@ -168,15 +180,81 @@ class VideoController {
     );
   }
 
-  async getCapturedVideosList(userId: string) {
-    let results: VideoMetaData[] = [];
+  async getAllUserVideos(userId: string) {
+    // Returns a list of VideoLocalMetaData
+    // If the video is stored in the cloud only and not locally, the
+    // localFilepath field will not be set
+
+    // Get the videos in the cloud.
+    const cloudVids = await this.getCloudVideos(userId);
+
+    // Get the local videos.
+    const localVids = await this.getLocalVideosList(userId);
+
+    // Merge the lists
+    let finalResults;
+    if (!cloudVids || cloudVids.length === 0) {
+      finalResults = localVids;
+    } else {
+      // Separate the ids into cloud only, local only, and interstection
+      const cloudIds = cloudVids.map(meta => meta.videoId);
+      const localIds = localVids.map(meta => meta.videoId);
+      const localOnlyIds = _.difference(localIds, cloudIds);
+      const cloudOnlyIds = _.difference(cloudIds, localIds);
+      const interIds = _.intersection(localIds, cloudIds);
+
+      // Pull all videos that are in cloud but not local
+      finalResults = cloudVids.filter(meta =>
+        cloudOnlyIds.includes(meta.videoId),
+      );
+
+      // Pull all videos that are in local but not cloud
+      finalResults = finalResults.concat(
+        localVids.filter(meta => localOnlyIds.includes(meta.videoId)),
+      );
+
+      // Merge all videos that show up in both (assume local meta data is more up-to-date)
+      finalResults = finalResults.concat(
+        interIds.map(videoId => {
+          return {
+            ...cloudVids.filter(m => m.videoId === videoId)[0],
+            ...localVids.filter(m => m.videoId === videoId)[0],
+          };
+        }),
+      );
+    }
+    return finalResults;
+  }
+
+  async getCloudVideos(userId: string) {
+    return this._cloudDbCollection
+      ?.readFilter('userId', '==', userId)
+      .then(recs =>
+        recs.map<VideoLocalMetaData>(rec => {
+          // Note, the localFilepath field should be undefined
+          return this.formatMetaDataFromCloud(rec.data);
+        }),
+      );
+  }
+
+  async getLocalVideosList(userId: string) {
+    let results: VideoLocalMetaData[] = [];
     let vidIds: string[] = [];
 
     // Pull videos recorded in the realm database
     if (this._localDbCollection) {
       results = await this._localDbCollection.readAll().then(videoList => {
-        return videoList.map<VideoMetaData>(item => {
-          return this.stringToMetaData(item.value);
+        return videoList.map<VideoLocalMetaData>(item => {
+          let rec = this.stringToLocalMetaData(item.value);
+          if (!rec.localFilepath) {
+            // Set the default path if it is not set (mainly a backwards compatibility issue)
+            rec.localFilepath = this.getVideoFilePath(
+              rec.userId,
+              rec.videoId,
+              VideoController.DEFAULT_VIDEO_EXTENSION,
+            );
+          }
+          return rec;
         });
       });
 
@@ -195,7 +273,8 @@ class VideoController {
                 userId,
                 videoId: item.name.split('.')[0],
                 createdDateTime: item.ctime,
-              } as VideoMetaData;
+                localFilepath: item.path,
+              } as VideoLocalMetaData;
             })
             .filter(
               item => !vidIds.includes(item.videoId) && item.videoId !== '',
@@ -209,46 +288,35 @@ class VideoController {
     return results;
   }
 
-  async saveVideo(srcPath: string, metaData: VideoMetaData) {
+  async saveVideoLocally(srcPath: string, metaData: VideoLocalMetaData) {
     const extension = _.last(srcPath.split('.'));
-    const dstFilepath = this.getVideoFilePath(
+    metaData.localFilepath = this.getVideoFilePath(
       metaData.userId,
       metaData.videoId,
-      'mp4',
+      extension,
     );
-    let promise;
-    if (extension && extension.toLowerCase() === 'mov') {
-      // Convert to mp4
-      promise = MovToMp4.convertMovToMp4(srcPath, dstFilepath);
-    } else {
-      promise = this._localFileStore?.saveFile(srcPath, dstFilepath);
-    }
-    // const promise = this._localFileStore?.saveFile(srcPath, dstFilepath);
-
-    return promise?.then(() => this.setVideoMetaData(metaData));
+    return this._localFileStore
+      ?.saveFile(srcPath, metaData.localFilepath)
+      .then(() => this.writeLocalMetaData(metaData));
   }
 
-  async isVideoUploaded(videoId: string) {
-    let result = false;
-
-    // Check if the record exists
-    if (this._cloudDbCollection) {
-      const rec = await this._cloudDbCollection.readOne(videoId);
-      if (rec && rec.data) {
-        result = true;
-      }
-    }
-
-    return result;
+  async isVideoUploaded(metaData: VideoLocalMetaData) {
+    return metaData.cloudStorageRootPath && metaData.cloudStorageRootPath !== ''
+      ? true
+      : false;
   }
 
-  async uploadVideo(userId: string, metaData: VideoMetaData) {
-    const localPath = this.getVideoFilePath(userId, metaData.videoId);
+  async uploadVideo(userId: string, metaData: VideoLocalMetaData) {
+    if (!metaData.localFilepath) {
+      console.log('uploadVideo: no local filepath for', metaData.videoId);
+      return;
+    }
 
     // Save to storage
     console.log('saving', metaData.videoId);
-    const dstPath = this.getVideoCloudFilePath(metaData.videoId);
-    await this._cloudBucket.saveFile(localPath, dstPath);
+    const extension = _.last(metaData.localFilepath.split('.'))?.toLowerCase();
+    const dstPath = this.getVideoCloudFilePath(metaData.videoId, extension);
+    await this._cloudBucket.saveFile(metaData.localFilepath, dstPath);
 
     // Save the root path
     metaData.cloudStorageRootPath = this.getVideoCloudRoot(metaData.videoId);
@@ -270,29 +338,55 @@ class VideoController {
   }
 
   async deleteVideo(
-    userId: string,
-    videoId: string,
+    metaData: VideoLocalMetaData,
     deleteFromCloud: boolean = false,
   ) {
     // Delete from the local file store
+    let errorList: Error[] = [];
+
     // Remove from realm
-    await this._localDbCollection?.delete(videoId);
+    console.log('delete', metaData);
+    await this._localDbCollection?.delete(metaData.videoId).catch(err => {
+      errorList.push(err);
+    });
 
     // Delete the file
-    await this._localFileStore?.deleteFile(
-      this.getVideoFilePath(userId, videoId),
-    );
+    if (metaData.localFilepath) {
+      console.log('delete file');
+      await this._localFileStore
+        ?.deleteFile(metaData.localFilepath)
+        .catch(err => {
+          errorList.push(err);
+        });
+    }
 
     // Delete from cloud
     if (deleteFromCloud) {
+      console.log('delete from cloud bucket');
       // Delete from cloud storage
-      await this._cloudBucket.deleteFile(this.getVideoCloudFilePath(videoId));
+      await this._cloudBucket
+        .deleteFile(this.getVideoCloudFilePath(metaData.videoId))
+        .catch(err => {
+          errorList.push(err);
+        });
 
       // Remove the video from the user
-      await this._userController.removeVideoFromUser(userId, videoId);
+      console.log('remove from user list');
+      await this._userController
+        .removeVideoFromUser(metaData.userId, metaData.videoId)
+        .catch(err => {
+          errorList.push(err);
+        });
 
       // Remove from the database
-      await this._cloudDbCollection?.delete(videoId);
+      console.log('remove form firebase');
+      await this._cloudDbCollection?.delete(metaData.videoId).catch(err => {
+        errorList.push(err);
+      });
+    }
+
+    if (errorList.length > 0) {
+      throw errorList;
     }
   }
 }
