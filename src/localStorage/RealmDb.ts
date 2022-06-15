@@ -36,6 +36,7 @@ export class RealmDbCollection implements ILocalDbCollection {
   constructor(realm: Realm, schema: Realm.ObjectSchema) {
     this._realm = realm;
     this._schema = schema;
+    console.log('realm location', this._realm.path);
   }
 
   async write(key: string, value: string) {

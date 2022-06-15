@@ -3,7 +3,7 @@ import {Alert, View, StyleSheet} from 'react-native';
 import {Button, Switch, Text} from 'react-native-paper';
 import {launchCamera, Asset} from 'react-native-image-picker';
 // import auth from '@react-native-firebase/auth';
-import {VideoController, VideoLocalMetaData} from '../controllers';
+import {VideoController, VideoMetaData} from '../controllers';
 import VideoInfoInputDialog, {
   VideoInfo,
 } from '../components/VideoInfoInputDialog';
@@ -20,7 +20,7 @@ const RecordScreen = () => {
 
   const saveVideo = async (videoInfo: VideoInfo | null = null) => {
     if (videoFileRef) {
-      const videoMetaData: VideoLocalMetaData = {
+      const videoMetaData: VideoMetaData = {
         videoId: VideoController.generateNewId(),
         userId: globalContext.userInfo!._id,
         createdDateTime: new Date(),
@@ -33,21 +33,24 @@ const RecordScreen = () => {
       if (videoController) {
         processingMessage.current = 'Saving file...';
         setIsProcessing(true);
-        await videoController
+        videoController
           .saveVideoLocally(videoFileRef.current!.uri!, videoMetaData)
+          .then(localMeta => {
+            // Upload (don't wait for it to finish before clearing the info dialog)
+            if (localMeta) {
+              videoController.uploadVideo(videoMetaData.userId, localMeta);
+            }
+          })
           .catch(err => Alert.alert('Error', `Error saving video ${err}`))
           .finally(() => {
             setIsProcessing(false);
             setInfoDialogVisible(false);
           });
-
-        // Upload (don't wait for it to finish before clearing the info dialog)
-        videoController.uploadVideo(videoMetaData.userId, videoMetaData);
       }
     }
   };
 
-  const goToCamera = async () => {
+  const recordNew = async () => {
     let result = await launchCamera({
       mediaType: 'video',
       videoQuality: 'high',
@@ -82,8 +85,8 @@ const RecordScreen = () => {
         />
         <Text>Save To Photos</Text>
       </View>
-      <Button mode="contained" onPress={() => goToCamera()}>
-        Go to camera
+      <Button mode="contained" onPress={() => recordNew()}>
+        Record New
       </Button>
     </View>
   );

@@ -16,3 +16,8 @@ export interface CloudDbEventType {
 }
 
 export type CloudDbFilterOperand = '==' | '<=' | '>=' | '<' | '>' | '!=' | 'in';
+
+export interface CloudStorageRef {
+  path: string;
+  name: string;
+}

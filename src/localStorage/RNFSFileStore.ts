@@ -1,5 +1,6 @@
 import {ILocalFileStore} from './ILocalFileStore';
 import RNFS from 'react-native-fs';
+import _ from 'lodash';
 import {LocalReadDirItem} from './types';
 
 class RNFSFileStore implements ILocalFileStore {
@@ -20,29 +21,46 @@ class RNFSFileStore implements ILocalFileStore {
     return this.getInstance();
   }
 
+  absolutePathToRelative(absolutePath: string) {
+    const splitPaths = absolutePath.split(this.documentDirectoryPath());
+    return _.last(splitPaths)!;
+  }
+
+  absolutePath(relativePath: string) {
+    return `${this.documentDirectoryPath()}/${relativePath}`;
+  }
+
   documentDirectoryPath() {
     return RNFS.DocumentDirectoryPath;
   }
 
   makeDirectory(dirPath: string) {
-    return RNFS.mkdir(dirPath);
+    return RNFS.mkdir(this.absolutePath(dirPath));
   }
 
-  saveFile(srcPath: string, dstPath: string) {
-    return RNFS.moveFile(srcPath, dstPath);
+  saveFile(absoluteSrcPath: string, relativeDstPath: string) {
+    return RNFS.moveFile(absoluteSrcPath, this.absolutePath(relativeDstPath));
   }
 
-  readDirectory(dirPath: string) {
-    console.log('read', dirPath);
-    return RNFS.readDir(dirPath).then(items => {
-      return items.map(item => {
-        return item as LocalReadDirItem; // The LocalReadDirItem we are returning matches that of the RNFS module ReadDirItem type
+  async readDirectory(relativeDirPath: string, recursive?: boolean) {
+    let results: LocalReadDirItem[] = [];
+    let dirList: string[] = [this.absolutePath(relativeDirPath)];
+    while (dirList.length) {
+      const dir = dirList.pop();
+      await RNFS.readDir(dir!).then(contents => {
+        contents.forEach(dirItem => {
+          results.push(dirItem as LocalReadDirItem);
+          if (recursive && dirItem.isDirectory()) {
+            dirList.push(dirItem.path);
+          }
+        });
       });
-    });
+    }
+    return results;
   }
 
-  deleteFile(filePath: string) {
-    return RNFS.unlink(filePath);
+  deleteFile(relativeFilePath: string) {
+    return RNFS.unlink(this.absolutePath(relativeFilePath));
   }
 }
 

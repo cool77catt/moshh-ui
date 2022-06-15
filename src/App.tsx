@@ -59,6 +59,18 @@ const App = () => {
     const localDb = new RealmDb();
     const localFileStore = await RNFSFileStore.configure();
 
+    // localFileStore
+    //   ?.readDirectory('')
+    //   .then(dirItems =>
+    //     dirItems.forEach(item => console.log('read', item.path)),
+    //   );
+
+    // localFileStore
+    //   ?.readDirectory('', true)
+    //   .then(dirItems =>
+    //     dirItems.forEach(item => console.log('readRecurs', item.path)),
+    //   );
+
     // setup cloud storage
     const cloudDb = new FirebaseDb();
     await CloudDbController.configure(cloudDb);

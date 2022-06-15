@@ -1,9 +1,17 @@
 import {LocalReadDirItem} from './types';
 
+/**
+ * Note => all paths are RELATIVE to the apps directory path!
+ * This was necessary because xcode debug builds a separate applciation folder
+ * for every build/run.  While it retains the data, the application directory path
+ * changes for each build, so you can't maintain absolutely paths.
+ */
 export interface ILocalFileStore {
+  absolutePath: (relativePath: string) => string;
+  absolutePathToRelative: (absolutePath: string) => string;
   documentDirectoryPath: () => string;
   makeDirectory: (dirPath: string) => Promise<void>;
-  saveFile: (srcPath: string, dstPath: string) => Promise<void>;
-  readDirectory: (dirPath: string) => Promise<LocalReadDirItem[]>;
-  deleteFile: (filePath: string) => Promise<void>;
+  saveFile: (absoluteSrcPath: string, relativeDstPath: string) => Promise<void>;
+  readDirectory: (relativeDirPath: string) => Promise<LocalReadDirItem[]>;
+  deleteFile: (relativeFilePath: string) => Promise<void>;
 }
