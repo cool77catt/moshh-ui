@@ -5,7 +5,6 @@ export interface UserInfo {
   _id: string;
   handle: string;
   handleLowercase: string;
-  videos?: string[];
 }
 
 /*

@@ -208,7 +208,7 @@ const App = () => {
               options={{tabBarIcon: 'magnify'}}
             />
             <Tab.Screen
-              name="Rec"
+              name="Add"
               component={RecordScreen}
               options={{tabBarIcon: 'plus-circle-outline'}}
             />

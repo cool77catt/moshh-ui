@@ -390,18 +390,7 @@ class VideoController {
     // Save to cloud db
     if (this._cloudDbCollection) {
       await this._cloudDbCollection!.set(metaData.base.videoId, metaData.base);
-      // const existingRec = await this._cloudDbCollection.readOne(
-      //   metaData.videoId,
-      // );
-      // if (!existingRec || !existingRec.data) {
-      // await this._cloudDbCollection!.set(metaData.videoId, metaData);
-      // } else {
-      //   console.log('already saved in the database');
-      // }
     }
-
-    // Add to users list
-    await this._userController.addVideoToUser(userId, metaData.base.videoId);
   }
 
   async deleteVideo(
@@ -433,13 +422,6 @@ class VideoController {
       console.log('delete dir', this.getVideoCloudRoot(metaData.base.videoId));
       await this._cloudBucket
         .deleteDirectory(this.getVideoCloudRoot(metaData.base.videoId))
-        .catch(err => {
-          errorList.push(err);
-        });
-
-      // Remove the video from the user
-      await this._userController
-        .removeVideoFromUser(metaData.base.userId, metaData.base.videoId)
         .catch(err => {
           errorList.push(err);
         });

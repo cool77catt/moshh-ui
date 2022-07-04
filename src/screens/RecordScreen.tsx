@@ -1,7 +1,11 @@
 import React, {useRef, useState, useContext} from 'react';
 import {Alert, View, StyleSheet} from 'react-native';
 import {Button, Switch, Text} from 'react-native-paper';
-import {launchCamera, Asset} from 'react-native-image-picker';
+import {
+  launchImageLibrary,
+  launchCamera,
+  Asset,
+} from 'react-native-image-picker';
 // import auth from '@react-native-firebase/auth';
 import {VideoController, VideoMetaData} from '../controllers';
 import VideoInfoInputDialog, {
@@ -15,38 +19,42 @@ const RecordScreen = () => {
   const [infoDialogVisible, setInfoDialogVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const processingMessage = useRef<string>('Processing...');
-  const videoFileRef = useRef<Asset>();
+  const videoFilesRef = useRef<Asset[]>();
   const globalContext = useContext(GlobalContext);
 
   const saveVideo = async (videoInfo: VideoInfo | null = null) => {
-    if (videoFileRef) {
-      const videoMetaData: VideoMetaData = {
-        videoId: VideoController.generateNewId(),
-        userId: globalContext.userInfo!._id,
-        createdDateTime: new Date(),
-        artistId: videoInfo?.artistId,
-        eventId: videoInfo?.eventId,
-        track: videoInfo?.track,
-      };
-
-      const videoController = VideoController.getInstance();
-      if (videoController) {
-        processingMessage.current = 'Saving file...';
-        setIsProcessing(true);
-        videoController
-          .saveVideoLocally(videoFileRef.current!.uri!, videoMetaData)
+    const videoController = VideoController.getInstance();
+    if (
+      videoController &&
+      videoFilesRef.current &&
+      videoFilesRef.current?.length > 0
+    ) {
+      processingMessage.current = 'Saving file(s)...';
+      setIsProcessing(true);
+      const promises = videoFilesRef.current.map(async asset => {
+        const videoMetaData: VideoMetaData = {
+          videoId: VideoController.generateNewId(),
+          userId: globalContext.userInfo!._id,
+          createdDateTime: new Date(),
+          artistId: videoInfo?.artistId,
+          eventId: videoInfo?.eventId,
+          track: videoInfo?.track,
+        };
+        return videoController
+          .saveVideoLocally(asset.uri!, videoMetaData)
           .then(localMeta => {
             // Upload (don't wait for it to finish before clearing the info dialog)
             if (localMeta) {
               videoController.uploadVideo(videoMetaData.userId, localMeta);
             }
           })
-          .catch(err => Alert.alert('Error', `Error saving video ${err}`))
-          .finally(() => {
-            setIsProcessing(false);
-            setInfoDialogVisible(false);
-          });
-      }
+          .catch(err => Alert.alert('Error', `Error saving video ${err}`));
+      });
+
+      await Promise.all(promises);
+
+      setIsProcessing(false);
+      setInfoDialogVisible(false);
     }
   };
 
@@ -61,7 +69,21 @@ const RecordScreen = () => {
     if (result.errorCode) {
       Alert.alert('Error', `Error taking video: ${result.errorMessage}`);
     } else if (!result.didCancel && result.assets && result.assets.length > 0) {
-      videoFileRef.current = result.assets[0];
+      videoFilesRef.current = result.assets;
+      setInfoDialogVisible(true);
+    }
+  };
+
+  const selectFromPhotos = async () => {
+    let result = await launchImageLibrary({
+      mediaType: 'video',
+      selectionLimit: 0,
+    });
+
+    if (result.errorCode) {
+      Alert.alert('Error', `Error choosing video: ${result.errorMessage}`);
+    } else if (!result.didCancel && result.assets && result.assets.length > 0) {
+      videoFilesRef.current = result.assets;
       setInfoDialogVisible(true);
     }
   };
@@ -85,8 +107,19 @@ const RecordScreen = () => {
         />
         <Text>Save To Photos</Text>
       </View>
-      <Button mode="contained" onPress={() => recordNew()}>
+      <Button
+        mode="contained"
+        style={styles.button}
+        onPress={() => recordNew()}>
         Record New
+      </Button>
+      <View style={styles.dividerView} />
+      <Button
+        mode="contained"
+        style={styles.button}
+        labelStyle={{textAlignVertical: 'center'}}
+        onPress={() => selectFromPhotos()}>
+        From Photos
       </Button>
     </View>
   );
@@ -98,6 +131,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  dividerView: {
+    borderWidth: 1,
+    borderColor: 'darkgray',
+    width: 200,
+    margin: 8,
+  },
   saveToPhotosContainer: {
     flexDirection: 'row',
     alignContent: 'center',
@@ -108,6 +147,11 @@ const styles = StyleSheet.create({
   },
   switch: {
     margin: 12,
+  },
+  button: {
+    width: 168,
+    height: 48,
+    justifyContent: 'center',
   },
 });
 
