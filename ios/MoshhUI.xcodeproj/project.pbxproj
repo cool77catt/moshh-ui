@@ -561,6 +561,7 @@
 				DEVELOPMENT_TEAM = 8F4A49HS57;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MoshhUI/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -587,6 +588,7 @@
 				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 8F4A49HS57;
 				INFOPLIST_FILE = MoshhUI/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

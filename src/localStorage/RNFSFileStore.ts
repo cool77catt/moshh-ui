@@ -1,5 +1,6 @@
 import {ILocalFileStore} from './ILocalFileStore';
 import RNFS from 'react-native-fs';
+import {Buffer} from 'buffer';
 import _ from 'lodash';
 import {LocalReadDirItem} from './types';
 
@@ -40,6 +41,27 @@ class RNFSFileStore implements ILocalFileStore {
 
   saveFile(absoluteSrcPath: string, relativeDstPath: string) {
     return RNFS.moveFile(absoluteSrcPath, this.absolutePath(relativeDstPath));
+  }
+
+  async readBinaryFile(relativeDstPath: string) {
+    console.log(
+      'read binary open',
+      relativeDstPath,
+      this.absolutePath(relativeDstPath),
+    );
+
+    const dataBase64 = await RNFS.readFile(
+      this.absolutePath(relativeDstPath),
+      'base64',
+    );
+
+    return Buffer.from(dataBase64, 'base64');
+  }
+
+  async writeFile(relativeDstPath: string, contents: string) {
+    const absPath = this.absolutePath(relativeDstPath);
+    await RNFS.writeFile(absPath, contents, 'utf8');
+    return absPath;
   }
 
   async readDirectory(relativeDirPath: string, recursive?: boolean) {

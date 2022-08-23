@@ -1,4 +1,5 @@
 import {LocalReadDirItem} from './types';
+import {Buffer} from 'buffer';
 
 /**
  * Note => all paths are RELATIVE to the apps directory path!
@@ -12,6 +13,8 @@ export interface ILocalFileStore {
   documentDirectoryPath: () => string;
   makeDirectory: (dirPath: string) => Promise<void>;
   saveFile: (absoluteSrcPath: string, relativeDstPath: string) => Promise<void>;
+  writeFile: (relativeDstPath: string, contents: string) => Promise<string>;
+  readBinaryFile: (relativeDstPath: string) => Promise<Buffer>;
   readDirectory: (relativeDirPath: string) => Promise<LocalReadDirItem[]>;
   deleteFile: (relativeFilePath: string) => Promise<void>;
 }
