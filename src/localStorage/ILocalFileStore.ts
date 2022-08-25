@@ -12,6 +12,7 @@ export interface ILocalFileStore {
   absolutePathToRelative: (absolutePath: string) => string;
   documentDirectoryPath: () => string;
   makeDirectory: (dirPath: string) => Promise<void>;
+  cleanDirectory: (dirPath: string) => Promise<void>;
   saveFile: (absoluteSrcPath: string, relativeDstPath: string) => Promise<void>;
   writeFile: (relativeDstPath: string, contents: string) => Promise<string>;
   readBinaryFile: (relativeDstPath: string) => Promise<Buffer>;

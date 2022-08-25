@@ -34,7 +34,9 @@ import VideoModal from './components/VideoModal';
 import {VideoController, UserController, UserInfo} from './controllers';
 import {RNFSFileStore, RealmDb} from './localStorage';
 import {CloudDbController, FirebaseDb, GCPCloudStorage} from './cloud';
-import {MoshhGenerator} from './utils/MoshhGenerator';
+import {MediaUtils} from './utils/MediaUtils';
+import {ConstellationManager} from './utils/ConstellationManager';
+import { MoshhGenerator } from './utils/MoshhGenerator';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -60,22 +62,35 @@ const App = () => {
     const localDb = new RealmDb();
     const localFileStore = await RNFSFileStore.configure();
 
-    // Test the video functions
-    const moshhGen = await MoshhGenerator.configure(localFileStore!);
+    // Connfigure the media utils and Moshh Generator
+    MediaUtils.configure(localFileStore!);
+    MoshhGenerator.configure(localFileStore!);
 
+    // Test the video functions
     const fileDir =
       '/Users/cool77catt/Projects/moshh/test-clips/should-I-stay-or-should-I-go';
-    // const videoPath = fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B.mov';
-    // const videoPath = fileDir + '/2EE85F61-681C-41A0-90F2-3BD2120412B0.mov';
-    // const audioPath = fileDir + '/audio2.wav';
-    const videoPath = fileDir + '/mergedNoAudio.mov';
-    const audioPath = fileDir + '/audio_faded.wav';
+    const videoPath1 = fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B.mov';
+    const videoPath2 = fileDir + '/2EE85F61-681C-41A0-90F2-3BD2120412B0.mov';
+    const weights = [50, 50];
+    const outputPath = fileDir + '/finalMoshh.mov';
+    await MoshhGenerator.generateMoshh(
+      [videoPath1, videoPath2],
+      weights,
+      outputPath,
+    );
+    // const audioPath1 = fileDir + '/audio1.wav';
+    // const audioPath2 = fileDir + '/audio2.wav';
+    // const videoPath = fileDir + '/mergedNoAudio.mov';
+    // const audioPath = fileDir + '/audio_faded.wav';
     // const audioPath2 = fileDir + '/audio2.wav';
     // const fadedAudioPath = fileDir + '/audio_faded.wav';
 
-    const outputPath = fileDir + '/videoAndAudio.mov';
-    const samples = await moshhGen?.getAudioBuffer(audioPath);
-    console.log('got samples', samples?.length);
+    // const outputPath = fileDir + '/videoAndAudio.mov';
+
+    
+
+    // const {data, rate} = await MediaUtils.loadAudioData(audioPath);
+    // console.log('got samples', data.length);
     // if (!status) {
     //   console.log('error with ffmpeg');
     // } else {

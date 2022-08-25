@@ -39,16 +39,23 @@ class RNFSFileStore implements ILocalFileStore {
     return RNFS.mkdir(this.absolutePath(dirPath));
   }
 
+  async cleanDirectory(dirPath: string) {
+    const remnants = await this.readDirectory(dirPath);
+    for (var dirItem of remnants) {
+      await this.deleteFile(dirItem.name);
+    }
+  }
+
   saveFile(absoluteSrcPath: string, relativeDstPath: string) {
     return RNFS.moveFile(absoluteSrcPath, this.absolutePath(relativeDstPath));
   }
 
   async readBinaryFile(relativeDstPath: string) {
-    console.log(
-      'read binary open',
-      relativeDstPath,
-      this.absolutePath(relativeDstPath),
-    );
+    // console.log(
+    //   'read binary open',
+    //   relativeDstPath,
+    //   this.absolutePath(relativeDstPath),
+    // );
 
     const dataBase64 = await RNFS.readFile(
       this.absolutePath(relativeDstPath),
