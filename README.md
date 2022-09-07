@@ -40,6 +40,10 @@ Added the following to Info.plist
 
 https://appicon.co/ -> upload a 1024x1024 png, and this tool will generate all the necessary sizes.  Then just need to download, extract, and add into the necessary ios/android folders.
 
+# FFMPEG library
+
+Note, had to install a separate package "min-gpl" in order to do the clip/concat functionality with a -preset flag.  So the installation instructions for the ffmpeg react native library for how to add this.
+
 # Helpful Links
 * https://medium.com/syntx-io/video-live-streaming-with-react-native-98a0f6354077
 

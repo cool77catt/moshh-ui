@@ -34,9 +34,8 @@ import VideoModal from './components/VideoModal';
 import {VideoController, UserController, UserInfo} from './controllers';
 import {RNFSFileStore, RealmDb} from './localStorage';
 import {CloudDbController, FirebaseDb, GCPCloudStorage} from './cloud';
-import {MediaUtils} from './utils/MediaUtils';
-import {ConstellationManager} from './utils/ConstellationManager';
-import { MoshhGenerator } from './utils/MoshhGenerator';
+import {MediaUtils, ClipConcatInfo} from './utils/MediaUtils';
+import {MoshhGenerator} from './utils/MoshhGenerator';
 
 const Tab = createMaterialBottomTabNavigator();
 
@@ -63,39 +62,45 @@ const App = () => {
     const localFileStore = await RNFSFileStore.configure();
 
     // Connfigure the media utils and Moshh Generator
-    MediaUtils.configure(localFileStore!);
-    MoshhGenerator.configure(localFileStore!);
+    console.log('configure clean dir');
+    await MediaUtils.configure(localFileStore!);
+    await MoshhGenerator.configure(localFileStore!);
 
     // Test the video functions
     const fileDir =
       '/Users/cool77catt/Projects/moshh/test-clips/should-I-stay-or-should-I-go';
     const videoPath1 = fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B.mov';
+    // const videoPath2 =
+    //   fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B copy.mov';
     const videoPath2 = fileDir + '/2EE85F61-681C-41A0-90F2-3BD2120412B0.mov';
     const weights = [50, 50];
-    const outputPath = fileDir + '/finalMoshh.mov';
-    await MoshhGenerator.generateMoshh(
-      [videoPath1, videoPath2],
-      weights,
-      outputPath,
-    );
-    // const audioPath1 = fileDir + '/audio1.wav';
-    // const audioPath2 = fileDir + '/audio2.wav';
-    // const videoPath = fileDir + '/mergedNoAudio.mov';
-    // const audioPath = fileDir + '/audio_faded.wav';
-    // const audioPath2 = fileDir + '/audio2.wav';
-    // const fadedAudioPath = fileDir + '/audio_faded.wav';
-
-    // const outputPath = fileDir + '/videoAndAudio.mov';
-
-    
-
-    // const {data, rate} = await MediaUtils.loadAudioData(audioPath);
-    // console.log('got samples', data.length);
-    // if (!status) {
-    //   console.log('error with ffmpeg');
-    // } else {
-    //   console.log('ffmpeg sucess!');
-    // }
+    // const outputPath = fileDir + '/finalMoshh.mov';
+    // const success = await MoshhGenerator.generateMoshh(
+    //   [videoPath1, videoPath2],
+    //   weights,
+    //   outputPath,
+    //   {preset: 'ultrafast'},
+    // );
+    const rotateOutput = await MediaUtils.getVideoRotation(videoPath1);
+    console.log('rotation', rotateOutput.status, rotateOutput.rotation);
+    // const inputArray: ClipConcatInfo[] = [
+    //   {
+    //     videoPath: videoPath1,
+    //     startPointSecs: 10.0,
+    //     duration: 5.4,
+    //   },
+    //   {
+    //     videoPath: videoPath2,
+    //     startPointSecs: 20.0,
+    //     duration: 7.3,
+    //   },
+    // ];
+    // const success = await MediaUtils.clipConcatReencode(
+    //   inputArray,
+    //   outputPath,
+    //   'ultrafast',
+    // );
+    // console.log(success);
 
     // localFileStore
     //   ?.readDirectory('')

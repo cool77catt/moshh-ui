@@ -5,6 +5,7 @@ import {
   ReturnCode,
   SessionState,
   FFmpegKitConfig,
+  MediaInformation,
 } from 'ffmpeg-kit-react-native';
 import {ILocalFileStore} from '../../localStorage';
 import {byteArrayToUInt16} from '../byteArrayUtils';
@@ -14,8 +15,9 @@ import {
   AudioFormatType,
   ExecutionInfo,
   AudioData,
-  CompressionSpeed,
+  PresetType,
   ClipConcatInfo,
+  RotationOutput,
 } from './types';
 
 export class MediaUtils {
@@ -58,17 +60,29 @@ export class MediaUtils {
     };
   }
 
-  static async execute(cmd: string): Promise<boolean> {
-    console.log('ffmpeg executing', cmd);
-    const session = await FFmpegKit.execute(cmd);
-
+  static async checkSession(
+    session: FFmpegSession,
+    cmd: string,
+  ): Promise<[SessionState, boolean]> {
     this.#executionInfo = {
       ...(await this.getSessionInfo(session)),
       command: cmd,
     };
 
-    // Make sure the session is completed
+    // Get the state and status
     const state = await session.getState();
+    const returnCode = await session.getReturnCode();
+    let status = ReturnCode.isSuccess(returnCode);
+    return [state, status];
+  }
+
+  static async execute(cmd: string): Promise<boolean> {
+    console.log('ffmpeg executing', cmd);
+    const session = await FFmpegKit.execute(cmd);
+
+    const [state, status] = await this.checkSession(session, cmd);
+
+    // Make sure the session is completed
     switch (state) {
       case SessionState.COMPLETED:
         break;
@@ -79,9 +93,6 @@ export class MediaUtils {
         return false;
     }
 
-    const returnCode = await session.getReturnCode();
-
-    let status = ReturnCode.isSuccess(returnCode);
     return status;
   }
 
@@ -96,6 +107,53 @@ export class MediaUtils {
     return information;
   }
 
+  static async getVideoFrameRate(
+    videoPath: string,
+    mediaInfo?: MediaInformation,
+  ) {
+    if (!mediaInfo) {
+      mediaInfo = await this.getMediaInformation(videoPath);
+    }
+
+    const [num, den] = mediaInfo.getStreams()[0].getRealFrameRate().split('/');
+    return Number(num) / Number(den);
+  }
+
+  static async getVideoRotation(videoPath: string): Promise<RotationOutput> {
+    // const cmd = `-v 0 -select_streams v:0 -show_entries stream_tags=rotate -of default=nw=1:nk=1 ${videoPath}`;
+    const cmd = `-i ${videoPath} -f ffmetadata -`;
+    const session = await FFmpegKit.execute(cmd);
+    // const session = await FFprobeKit.execute(cmd);
+    const returnCode = await session.getReturnCode();
+    const output = await session.getOutput();
+    const state = await session.getState();
+    const stackTrace = await session.getFailStackTrace();
+
+    let result = -1;
+    let status = false;
+    console.log('ret code', ReturnCode.isSuccess(returnCode));
+    if (ReturnCode.isSuccess(returnCode) && output !== '') {
+      try {
+        result = Number(output);
+        status = true;
+      } catch (err) {
+        console.error('error getting video rotation', err);
+        console.error('output', output);
+      }
+    }
+    return {
+      rotation: result,
+      status,
+    };
+  }
+
+  static async getAudioRate(audioPath: string, mediaInfo?: MediaInformation) {
+    if (!mediaInfo) {
+      mediaInfo = await this.getMediaInformation(audioPath);
+    }
+    return Number(mediaInfo.getStreams()[0].getSampleRate());
+  }
+
   static async extractAudioFromVideo(
     videoPath: string,
     audioFormat: AudioFormatType,
@@ -103,13 +161,8 @@ export class MediaUtils {
     bitrate: number = 1920000,
   ) {
     // Compile the command.  The "-y" means overwrite if file already exists - otherwise the command will fail
-    const cmd = `-y -i ${videoPath} -f ${audioFormat} -ab ${bitrate} -vn ${outputAudioPath}`;
+    const cmd = `-y -i "${videoPath}" -f ${audioFormat} -ab ${bitrate} -vn "${outputAudioPath}"`;
     return this.execute(cmd);
-  }
-
-  static async getAudioRate(audioPath: string) {
-    const mediaInfo = await this.getMediaInformation(audioPath);
-    return Number(mediaInfo.getStreams()[0].getSampleRate());
   }
 
   static async loadAudioData(audioPath: string): Promise<AudioData> {
@@ -124,7 +177,7 @@ export class MediaUtils {
     const pcmAbsFilePath = this.#localFileStore!.absolutePath(pcmRelFilePath);
 
     // Use FFMPEG to create a new temporary file
-    const cmd = `-y -i ${audioPath} -ac 1 -f s16le -acodec pcm_s16le ${pcmAbsFilePath}`;
+    const cmd = `-y -i "${audioPath}" -ac 1 -f s16le -acodec pcm_s16le "${pcmAbsFilePath}"`;
     const status = await this.execute(cmd);
     if (!status) {
       throw this.#executionInfo?.output;
@@ -157,7 +210,7 @@ export class MediaUtils {
     const outStartTime = duration - fadeOutDuration;
     const fadeParams = `afade=t=in:st=0:d=${fadeInDuration},afade=t=out:st=${outStartTime}:d=${fadeOutDuration}`;
 
-    let cmd = `-y -i ${audioPath} -af "${fadeParams}" ${outputPath}`;
+    let cmd = `-y -i "${audioPath}" -af "${fadeParams}" "${outputPath}"`;
     return this.execute(cmd);
   }
 
@@ -173,7 +226,7 @@ export class MediaUtils {
       rates.push(await this.getAudioRate(p));
     }
 
-    const inputFlags = audioPaths.map(a => `-i ${a}`).join(' ');
+    const inputFlags = audioPaths.map(a => `-i "${a}"`).join(' ');
 
     // Add the delays.  Note, FFMPEG doesn't handle floats for this,
     // so instead we convert to samples using the sample rate (delay * samples/sec)
@@ -190,7 +243,7 @@ export class MediaUtils {
       .join('');
     const mixParams = `${mixInputs}amix=inputs=${audioPaths.length}:duration=longest[mixout]`;
 
-    const cmd = `-y ${inputFlags} -filter_complex "${delayParams};${mixParams}" -map [mixout] ${outputPath}`;
+    const cmd = `-y ${inputFlags} -filter_complex "${delayParams};${mixParams}" -map [mixout] "${outputPath}"`;
     return this.execute(cmd);
   }
 
@@ -199,7 +252,22 @@ export class MediaUtils {
     audioPath: string,
     outputPath: string,
   ) {
-    const cmd = `-y -i ${videoPath} -i ${audioPath} -c:v copy -map 0:v -map 1:a ${outputPath}`;
+    const cmd = `-y -i "${videoPath}" -i "${audioPath}" -c:v copy -map 0:v -map 1:a "${outputPath}"`;
+    return this.execute(cmd);
+  }
+
+  static async generateThumbnail(
+    videoPath: string,
+    timestamp: number,
+    outputPath: string,
+    size?: [number, number],
+  ) {
+    let cmd = `-ss ${timestamp} -i ${videoPath} `;
+    cmd += '-vframes 1 ';
+    if (size) {
+      cmd += `-s ${size[0]}x${size[1]} `;
+    }
+    cmd += `-y ${outputPath}`;
     return this.execute(cmd);
   }
 
@@ -232,7 +300,7 @@ export class MediaUtils {
     const audioFlag = excludeAudio ? '-an' : '';
     const startTimestamp = this.secsToTimestampString(startTime);
     const durationTimestamp = this.secsToTimestampString(duration);
-    const cmd = `-y -i ${videoPath} -ss ${startTimestamp} -t ${durationTimestamp} -c copy ${audioFlag} ${outputPath}`;
+    const cmd = `-y -i "${videoPath}" -ss ${startTimestamp} -t ${durationTimestamp} -c copy ${audioFlag} "${outputPath}"`;
     return this.execute(cmd);
   }
 
@@ -247,7 +315,7 @@ export class MediaUtils {
     );
 
     // Compile the command
-    const cmd = `-y -f concat -safe 0 -i ${absInputPath} -c copy ${outputPath}`;
+    const cmd = `-y -f concat -safe 0 -i "${absInputPath}" -c copy "${outputPath}"`;
 
     // Execute the command
     let result = false;
@@ -268,29 +336,110 @@ export class MediaUtils {
   static async clipConcatReencode(
     inputArray: ClipConcatInfo[],
     outputPath: string,
-    compressionSpeed: CompressionSpeed = 'medium',
+    preset: PresetType = 'medium',
+    output_pix_fmt = 'yuv420p',
+    video_codec = 'libx264',
+    fps = 30000 / 1001,
+    width = 1080,
+    height = 1920,
   ) {
-    /**
-     * Example:
-     * -ss 60.75 -t 5.15 -i 7405C001-AAE7-4BFA-A902-E3A982BD348B.mov \
-     * -ss 65.90 -t 5.25 -i 2EE85F61-681C-41A0-90F2-3BD2120412B0.mov \
-     * -filter_complex "[0][1]concat=n=2:v=1:a=0" -preset faster output.mov
-     */
-    let globalStart = 0;
-    const inputStr = inputArray
-      .map(info => {
-        const localStr = `-ss ${globalStart} -t ${info.duration} -i ${info.audioPath}`;
-        globalStart += info.duration;
-        return localStr;
+    // setup constants
+    const input_pix_fmt = 'rgb24';
+
+    // Create the pipes
+    const pipes = await Promise.all(
+      _.range(inputArray.length).map(() =>
+        FFmpegKitConfig.registerNewFFmpegPipe(),
+      ),
+    );
+
+    // Setup the output command
+    let outputCmd = inputArray
+      .map((input, idx) => {
+        // Create the input section of the output command
+        let cmd = '';
+        cmd += '-f rawvideo -vcodec rawvideo ';
+        cmd += `-s ${width}x${height} `;
+        cmd += `-pix_fmt ${input_pix_fmt} `;
+        cmd += `-r ${fps} `;
+        cmd += `-an -i "${pipes[idx]}" `;
+        return cmd;
       })
-      .join(' ');
-
-    const filterInputStr = _.range(0, inputArray.length)
-      .map(i => `[${i}]`)
       .join('');
-    const filterStr = `${filterInputStr}concat=n=${inputArray.length}:v=1:a=0`;
 
-    const cmd = `${inputStr} -filter_complex "${filterStr}" -preset ${compressionSpeed} ${outputPath}`;
-    return this.execute(cmd);
+    // Use the frames to create the output video
+    const concatInputStr = _.range(pipes.length)
+      .map(idx => `[${idx}]`)
+      .join('');
+    outputCmd += `-filter_complex "${concatInputStr}concat=n=${pipes.length}:v=1:a=0" `;
+    outputCmd += `-vcodec ${video_codec} -preset ${preset} -pix_fmt ${output_pix_fmt} `;
+    outputCmd += `${outputPath} -y`;
+    console.log('executing main session');
+    console.log(outputCmd);
+    const mainSession = await FFmpegKit.executeAsync(outputCmd);
+
+    // Write the pipes
+    let fCount = 0;
+    let cumDuration = 0;
+    for (let [idx, input] of inputArray.entries()) {
+      cumDuration += input.duration;
+      const endPointFrames = cumDuration * fps;
+      const durationFrames = Math.floor(endPointFrames - fCount);
+
+      // Create the pipe
+      let cmd = `-ss ${input.startPointSecs} -i ${input.videoPath} `;
+      cmd += '-f image2pipe ';
+      cmd += `-pix_fmt ${input_pix_fmt} `;
+      cmd += `-an -c:v rawvideo -frames ${durationFrames} `;
+      cmd += `-y "${pipes[idx]}"`;
+
+      console.log('executing pipe input', cmd);
+      FFmpegKit.execute(cmd).then(async session => {
+        // Close the pipe
+        FFmpegKitConfig.closeFFmpegPipe(pipes[idx]);
+
+        const [state, status] = await this.checkSession(session, cmd);
+        console.log(`session finished ${status} ${state} cmd=${cmd}`);
+        if (!status) {
+          throw this.getExecutionInfo()?.output;
+        }
+      });
+
+      // Update the fcount
+      fCount += durationFrames;
+    }
+
+    // Wait for the main process to finish
+    let state: SessionState;
+    do {
+      this.checkSession(mainSession, outputCmd);
+
+      this.#executionInfo = {
+        ...(await this.getSessionInfo(mainSession)),
+        command: outputCmd,
+      };
+
+      state = await mainSession.getState();
+      switch (state) {
+        case SessionState.RUNNING:
+          // sleep
+          console.log('sleeping on main process');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          break;
+        case SessionState.COMPLETED:
+          console.log('main process finished');
+          break;
+        case SessionState.FAILED:
+          console.error('ffmpeg async failed', this.#executionInfo.output);
+          return false;
+      }
+    } while (state === SessionState.RUNNING || state === SessionState.CREATED);
+
+    // close the pipes
+    await Promise.all(pipes.map(pipe => FFmpegKitConfig.closeFFmpegPipe(pipe)));
+
+    const returnCode = await mainSession.getReturnCode();
+    console.log('video finished return code', returnCode);
+    return ReturnCode.isSuccess(returnCode);
   }
 }

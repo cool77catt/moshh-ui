@@ -13,12 +13,22 @@ export type ExecutionInfo = {
   command?: string;
 };
 
+export type RotationOutput = {
+  rotation: number;
+  status: boolean;
+};
+
 export type AudioData = {
   data: number[];
   rate: number;
 };
 
-export type CompressionSpeed =
+/**
+ * Compression speed is the tradeoff between
+ * compression quality and speed - the slower the speed,
+ * the better the compression (smaller file size per quality)
+ */
+export type PresetType =
   | 'ultrafast'
   | 'superfast'
   | 'veryfast'
@@ -27,11 +37,10 @@ export type CompressionSpeed =
   | 'medium'
   | 'slow'
   | 'slower'
-  | 'veryslow'
-  | 'placebo';
+  | 'veryslow';
 
 export type ClipConcatInfo = {
-  audioPath: string;
+  videoPath: string;
   startPointSecs: number;
   duration: number;
 };

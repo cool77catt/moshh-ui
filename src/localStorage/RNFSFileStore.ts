@@ -22,13 +22,17 @@ class RNFSFileStore implements ILocalFileStore {
     return this.getInstance();
   }
 
+  join(path1: string, path2: string) {
+    return `${path1}/${path2}`;
+  }
+
   absolutePathToRelative(absolutePath: string) {
     const splitPaths = absolutePath.split(this.documentDirectoryPath());
     return _.last(splitPaths)!;
   }
 
   absolutePath(relativePath: string) {
-    return `${this.documentDirectoryPath()}/${relativePath}`;
+    return this.join(this.documentDirectoryPath(), relativePath);
   }
 
   documentDirectoryPath() {
@@ -42,7 +46,12 @@ class RNFSFileStore implements ILocalFileStore {
   async cleanDirectory(dirPath: string) {
     const remnants = await this.readDirectory(dirPath);
     for (var dirItem of remnants) {
-      await this.deleteFile(dirItem.name);
+      try {
+        console.log('deleting clean', dirItem.name);
+        await this.deleteFile(this.join(dirPath, dirItem.name));
+      } catch (err) {
+        console.log('error with deleting file', dirItem.name, err);
+      }
     }
   }
 

@@ -1,7 +1,13 @@
-import {ConstellationInfo, ConstellationManager} from './ConstellationManager';
-import {MediaUtils, AudioFormatType} from './MediaUtils';
-import {ILocalFileStore} from '../localStorage';
 import _ from 'lodash';
+import {ConstellationInfo, ConstellationManager} from '../ConstellationManager';
+import {
+  MediaUtils,
+  AudioFormatType,
+  PresetType,
+  ClipConcatInfo,
+} from '../MediaUtils';
+import {ILocalFileStore} from '../../localStorage';
+import {MoshhGeneratorOptions} from './types';
 
 async function assertMediaUtil(promise: Promise<boolean>) {
   if (!(await promise)) {
@@ -172,80 +178,72 @@ export class MoshhGenerator {
     weights: number[],
     offsets: [number, number][],
     outputPath: string,
-    outputVideoFormat: string,
     minSubclipDuration: number,
     maxSubclipDuration: number,
+    compressionSpeed: PresetType,
   ) {
     // Pre-compute some variables
     const durationDiff = maxSubclipDuration - minSubclipDuration;
     const maxDuration = Math.max(...offsets.map(o => o[1]));
 
     // Build the timeline
-    let clipRelPaths: string[] = [];
+    let concatInputs: ClipConcatInfo[] = [];
     let t = 0;
-    try {
-      while (t < maxDuration) {
-        console.log(`Creating subclip for t=${t}`);
-        // Choose a random clip that aligns
-        let randIdx = -1;
-        while (true) {
-          randIdx = this.getRandomIndex(weights);
-          if (offsets[randIdx][0] <= t) {
-            break;
-          }
+    while (t < maxDuration) {
+      // Choose a random clip that aligns
+      let randIdx = -1;
+      while (true) {
+        randIdx = this.getRandomIndex(weights);
+        if (offsets[randIdx][0] <= t && offsets[randIdx][1] > t) {
+          break;
         }
-
-        // Compute the duration of the clip, based on random duration
-        // and remaining duration on the random video choice
-        let clipDuration = Math.random() * durationDiff + minSubclipDuration;
-        clipDuration = Math.min(clipDuration, offsets[randIdx][1] - t);
-        // clipDuration = Math.floor(clipDuration * 1000
-
-        // correct the offset to be local to the video, not global to the timeline
-        const correctedT = t - offsets[randIdx][0];
-
-        // Create the subclip, save the file temporarily
-        const clipRelPath = this.getTmpRelativePath(
-          `moshh_subclip_${clipRelPaths.length}.${outputVideoFormat}`,
-        );
-        await assertMediaUtil(
-          MediaUtils.createSubclip(
-            videoPaths[randIdx],
-            this.#localFileStore!.absolutePath(clipRelPath),
-            correctedT,
-            clipDuration,
-            true,
-          ),
-        );
-        clipRelPaths.push(clipRelPath);
-
-        // Update the global point
-        t += clipDuration;
       }
 
-      // Merge the clips
-      await assertMediaUtil(
-        MediaUtils.mergeVideoClips(
-          clipRelPaths.map(p => this.#localFileStore!.absolutePath(p)),
-          outputPath,
-        ),
+      // Compute the duration of the clip, based on random duration
+      // and remaining duration on the random video choice
+      let clipDuration;
+      const remainingDuration = offsets[randIdx][1] - t;
+      if (remainingDuration < maxSubclipDuration) {
+        clipDuration = remainingDuration;
+      } else {
+        clipDuration = Math.random() * durationDiff + minSubclipDuration;
+      }
+
+      // correct the offset to be local to the video, not global to the timeline
+      const correctedT = t - offsets[randIdx][0];
+
+      // Save the input to the list
+      concatInputs.push({
+        videoPath: videoPaths[randIdx],
+        startPointSecs: correctedT,
+        duration: clipDuration,
+      });
+
+      console.log(
+        `Clip: global_t ${t}, startPoint ${correctedT}, duration ${clipDuration}, video ${videoPaths[randIdx]}`,
       );
-    } finally {
-      // Delete the clips
-      for (let clipPath of clipRelPaths) {
-        this.#localFileStore?.deleteFile(clipPath);
-      }
+
+      // Update the global point
+      t += clipDuration;
     }
+
+    // Clip, merge, and re-encode the clips
+    await assertMediaUtil(
+      MediaUtils.clipConcatReencode(concatInputs, outputPath, compressionSpeed),
+    );
   }
 
   static async generateMoshh(
     videoPaths: string[],
     weights: number[],
     outputVideoPath: string,
-    minSubclipDuration: number = 4.0,
-    maxSubclipDuration: number = 6.0,
-    outputVideoFormat: string = 'mov',
-    preloadedConstellations: ConstellationInfo[] = [],
+    {
+      minSubclipDuration = 4.0,
+      maxSubclipDuration = 6.0,
+      outputVideoFormat = 'mov',
+      preloadedConstellations = [],
+      preset = 'medium',
+    }: MoshhGeneratorOptions = {},
   ) {
     // Validate the inputs
     if (videoPaths.length <= 1) {
@@ -294,6 +292,7 @@ export class MoshhGenerator {
 
       // Compile the videos
       console.log('Compiling video');
+      const startTime = Date.now();
       const videoCompilationRelPath = this.getTmpRelativePath(
         `vidComp.${outputVideoFormat}`,
       );
@@ -302,11 +301,13 @@ export class MoshhGenerator {
         weights,
         globalOffsets,
         this.#localFileStore!.absolutePath(videoCompilationRelPath),
-        outputVideoFormat,
         minSubclipDuration,
         maxSubclipDuration,
+        preset,
       );
       tmpFileRelPaths.push(videoCompilationRelPath);
+      const endTime = Date.now();
+      console.log('Time to compile', endTime - startTime);
 
       // Fade the audios
       const fadedPaths = await this.fadeAudios(audioRelPaths);
