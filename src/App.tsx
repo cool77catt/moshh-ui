@@ -81,8 +81,9 @@ const App = () => {
     //   outputPath,
     //   {preset: 'ultrafast'},
     // );
-    const rotateOutput = await MediaUtils.getVideoRotation(videoPath1);
-    console.log('rotation', rotateOutput.status, rotateOutput.rotation);
+    const vidInfo = await MediaUtils.getVideoInfo(videoPath1);
+    console.log(vidInfo);
+    console.log('rotation', vidInfo.rotation);
     // const inputArray: ClipConcatInfo[] = [
     //   {
     //     videoPath: videoPath1,

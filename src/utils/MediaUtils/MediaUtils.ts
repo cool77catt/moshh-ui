@@ -15,9 +15,9 @@ import {
   AudioFormatType,
   ExecutionInfo,
   AudioData,
+  VideoInfo,
   PresetType,
   ClipConcatInfo,
-  RotationOutput,
 } from './types';
 
 export class MediaUtils {
@@ -107,43 +107,49 @@ export class MediaUtils {
     return information;
   }
 
-  static async getVideoFrameRate(
-    videoPath: string,
-    mediaInfo?: MediaInformation,
-  ) {
-    if (!mediaInfo) {
-      mediaInfo = await this.getMediaInformation(videoPath);
-    }
+  static async getVideoInfo(videoPath: string): Promise<VideoInfo> {
+    const information = await this.getMediaInformation(videoPath);
+    const vidStream = information.getStreams()[0];
 
-    const [num, den] = mediaInfo.getStreams()[0].getRealFrameRate().split('/');
-    return Number(num) / Number(den);
-  }
+    // Get the width/height
+    const width = vidStream.getWidth();
+    const height = vidStream.getHeight();
 
-  static async getVideoRotation(videoPath: string): Promise<RotationOutput> {
-    // const cmd = `-v 0 -select_streams v:0 -show_entries stream_tags=rotate -of default=nw=1:nk=1 ${videoPath}`;
-    const cmd = `-i ${videoPath} -f ffmetadata -`;
-    const session = await FFmpegKit.execute(cmd);
-    // const session = await FFprobeKit.execute(cmd);
-    const returnCode = await session.getReturnCode();
-    const output = await session.getOutput();
-    const state = await session.getState();
-    const stackTrace = await session.getFailStackTrace();
+    // get the rotation
+    let rotation: number | undefined;
+    let effectiveWidth = width;
+    let effectiveHeight = height;
+    try {
+      rotation = vidStream.getProperties('side_data_list')[0].rotation;
 
-    let result = -1;
-    let status = false;
-    console.log('ret code', ReturnCode.isSuccess(returnCode));
-    if (ReturnCode.isSuccess(returnCode) && output !== '') {
-      try {
-        result = Number(output);
-        status = true;
-      } catch (err) {
-        console.error('error getting video rotation', err);
-        console.error('output', output);
+      // Compute the effective width/height
+      const absRotation = Math.abs(rotation!);
+      if (absRotation === 90 || absRotation === 270) {
+        effectiveWidth = height;
+        effectiveHeight = width;
       }
+    } catch (err) {
+      console.error('Error getting rotation', err);
     }
+
+    // Get the fps
+    const fpsString = vidStream.getRealFrameRate();
+    let fps;
+    if (fpsString.includes('/')) {
+      const [num, den] = fpsString.split('/');
+      fps = Number(num) / Number(den);
+    } else {
+      fps = Number(fpsString);
+    }
+
     return {
-      rotation: result,
-      status,
+      width,
+      height,
+      effectiveWidth,
+      effectiveHeight,
+      rotation,
+      fpsString,
+      fps,
     };
   }
 

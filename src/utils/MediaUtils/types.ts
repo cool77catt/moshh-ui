@@ -13,14 +13,19 @@ export type ExecutionInfo = {
   command?: string;
 };
 
-export type RotationOutput = {
-  rotation: number;
-  status: boolean;
-};
-
 export type AudioData = {
   data: number[];
   rate: number;
+};
+
+export type VideoInfo = {
+  width: number;
+  height: number;
+  effectiveWidth: number; // Accounts for rotation
+  effectiveHeight: number; // Accounts for rotation
+  rotation?: number;
+  fpsString: string;
+  fps: number;
 };
 
 /**
