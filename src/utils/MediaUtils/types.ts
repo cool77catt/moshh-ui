@@ -21,11 +21,14 @@ export type AudioData = {
 export type VideoInfo = {
   width: number;
   height: number;
+  aspectRatio: number;
   effectiveWidth: number; // Accounts for rotation
   effectiveHeight: number; // Accounts for rotation
+  effectiveAspectRatio: number;
   rotation?: number;
   fpsString: string;
   fps: number;
+  duration: number;
 };
 
 /**
@@ -43,6 +46,20 @@ export type PresetType =
   | 'slow'
   | 'slower'
   | 'veryslow';
+
+export type PixelFormat = 'yuv420p';
+
+export type VideoCodec = 'libx264';
+
+export type VideoOutputOptions = {
+  preset?: PresetType;
+  pixelFormat?: PixelFormat;
+  videoCodec?: VideoCodec;
+  fps?: number;
+  width?: number;
+  height?: number;
+  excludeAudio?: boolean;
+};
 
 export type ClipConcatInfo = {
   videoPath: string;

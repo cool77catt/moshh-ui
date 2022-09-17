@@ -1,13 +1,13 @@
 import _ from 'lodash';
 import {ConstellationInfo, ConstellationManager} from '../ConstellationManager';
-import {
-  MediaUtils,
-  AudioFormatType,
-  PresetType,
-  ClipConcatInfo,
-} from '../MediaUtils';
+import {MediaUtils, AudioFormatType, ClipConcatInfo} from '../MediaUtils';
 import {ILocalFileStore} from '../../localStorage';
-import {MoshhGeneratorOptions} from './types';
+import {
+  MoshhGeneratorOptions,
+  MoshhGeneratorOutputOptions,
+  MoshhGeneratorProgressCallback,
+  MoshhGeneratorProgressStatus,
+} from './types';
 
 async function assertMediaUtil(promise: Promise<boolean>) {
   if (!(await promise)) {
@@ -180,7 +180,14 @@ export class MoshhGenerator {
     outputPath: string,
     minSubclipDuration: number,
     maxSubclipDuration: number,
-    compressionSpeed: PresetType,
+    {
+      preset = 'medium',
+      output_pix_fmt = 'yuv420p',
+      video_codec = 'libx264',
+      fps = 30000 / 1001,
+      width = 1080,
+      height = 1920,
+    }: MoshhGeneratorOutputOptions,
   ) {
     // Pre-compute some variables
     const durationDiff = maxSubclipDuration - minSubclipDuration;
@@ -229,29 +236,53 @@ export class MoshhGenerator {
 
     // Clip, merge, and re-encode the clips
     await assertMediaUtil(
-      MediaUtils.clipConcatReencode(concatInputs, outputPath, compressionSpeed),
+      MediaUtils.clipConcatReencode(
+        concatInputs,
+        outputPath,
+        preset,
+        output_pix_fmt,
+        video_codec,
+        fps,
+        width,
+        height,
+      ),
     );
+  }
+
+  static async _handleStatus(
+    message: string,
+    status: MoshhGeneratorProgressStatus,
+    callback?: MoshhGeneratorProgressCallback,
+  ) {
+    console.log(message);
+    callback?.(status, message);
   }
 
   static async generateMoshh(
     videoPaths: string[],
     weights: number[],
-    outputVideoPath: string,
     {
+      outputVideoPath,
       minSubclipDuration = 4.0,
       maxSubclipDuration = 6.0,
       outputVideoFormat = 'mov',
       preloadedConstellations = [],
       preset = 'medium',
-    }: MoshhGeneratorOptions = {},
+      output_pix_fmt = 'yuv420p',
+      video_codec = 'libx264',
+      fps = 30000 / 1001,
+      width = 1080,
+      height = 1920,
+      statusCallback,
+    }: MoshhGeneratorOptions & MoshhGeneratorOutputOptions = {},
   ) {
     // Validate the inputs
     if (videoPaths.length <= 1) {
       throw 'Not enough videos';
     }
 
-    // Generate the constellations
     let tmpFileRelPaths: string[] = [];
+    let finalOutputPath = outputVideoPath; // Initialize the final output as the input param. If its undefined, it will be replaced
 
     try {
       const mediaInfos = await Promise.all(
@@ -261,12 +292,20 @@ export class MoshhGenerator {
       );
 
       // Extract the audios
-      console.log('extracting audios');
+      this._handleStatus(
+        'Extracting Audios',
+        MoshhGeneratorProgressStatus.ExtractingAudio,
+        statusCallback,
+      );
       const audioRelPaths = await this.extractAudios(videoPaths);
       tmpFileRelPaths.concat(audioRelPaths);
 
       // Generate the constellations
-      console.log('generating constellations');
+      this._handleStatus(
+        'generating constellations',
+        MoshhGeneratorProgressStatus.GeneratingConstellations,
+        statusCallback,
+      );
       let constellations: ConstellationInfo[] = [];
       if (preloadedConstellations.length === 0) {
         for (let path of audioRelPaths) {
@@ -281,7 +320,11 @@ export class MoshhGenerator {
       }
 
       // Get the global offsets
-      console.log('calculating offsets');
+      this._handleStatus(
+        'calculating offsets',
+        MoshhGeneratorProgressStatus.CalculatingOffsets,
+        statusCallback,
+      );
       const durations = mediaInfos.map(info => Number(info.getDuration()));
       const globalOffsets = this.computeGlobalOffsets(
         constellations,
@@ -291,7 +334,11 @@ export class MoshhGenerator {
       console.log(globalOffsets);
 
       // Compile the videos
-      console.log('Compiling video');
+      this._handleStatus(
+        'compiling video',
+        MoshhGeneratorProgressStatus.CompilingVideo,
+        statusCallback,
+      );
       const startTime = Date.now();
       const videoCompilationRelPath = this.getTmpRelativePath(
         `vidComp.${outputVideoFormat}`,
@@ -303,18 +350,34 @@ export class MoshhGenerator {
         this.#localFileStore!.absolutePath(videoCompilationRelPath),
         minSubclipDuration,
         maxSubclipDuration,
-        preset,
+        {
+          preset,
+          output_pix_fmt,
+          video_codec,
+          fps,
+          width,
+          height,
+        },
       );
       tmpFileRelPaths.push(videoCompilationRelPath);
       const endTime = Date.now();
       console.log('Time to compile', endTime - startTime);
 
       // Fade the audios
+      this._handleStatus(
+        'fading audios',
+        MoshhGeneratorProgressStatus.FadingAudios,
+        statusCallback,
+      );
       const fadedPaths = await this.fadeAudios(audioRelPaths);
       tmpFileRelPaths.concat(fadedPaths);
 
       // Merge the audio files
-      console.log('merging audios');
+      this._handleStatus(
+        'Merging Audio Files',
+        MoshhGeneratorProgressStatus.MergingAudios,
+        statusCallback,
+      );
       const mergedAudioRelPath = this.getTmpRelativePath(
         `merged_audio.${this.AUDIO_FMT}`,
       );
@@ -327,26 +390,49 @@ export class MoshhGenerator {
       );
       tmpFileRelPaths.push(mergedAudioRelPath);
 
+      // Compile the outpath path
+      if (finalOutputPath === undefined) {
+        const randNum = _.random(1e6, false);
+        finalOutputPath = this.#localFileStore!.absolutePath(
+          this.getTmpRelativePath(`moshh${randNum}.jpg`),
+        );
+      }
+
       // Overlay the audio files
-      console.log('overlaying audios');
+      this._handleStatus(
+        'overlaying audios',
+        MoshhGeneratorProgressStatus.OverlayingAudios,
+        statusCallback,
+      );
       await assertMediaUtil(
         MediaUtils.overlayAudioOnVideo(
           this.#localFileStore!.absolutePath(videoCompilationRelPath),
           this.#localFileStore!.absolutePath(mergedAudioRelPath),
-          outputVideoPath,
+          finalOutputPath!,
         ),
       );
-
-      console.log('done');
-
       // Clean up unnecessary files
     } catch (err) {
       console.log('Got an error generating moshh', err);
     } finally {
       // Delete any tmp files that were created
+      this._handleStatus(
+        'cleaning up tmp files',
+        MoshhGeneratorProgressStatus.CleaningUp,
+        statusCallback,
+      );
       for (let p of tmpFileRelPaths) {
         this.#localFileStore?.deleteFile(p);
       }
+
+      // Indicate the process is done
+      this._handleStatus(
+        'finished',
+        MoshhGeneratorProgressStatus.Finished,
+        statusCallback,
+      );
     }
+
+    return finalOutputPath;
   }
 }

@@ -17,6 +17,7 @@ import {
   AudioData,
   VideoInfo,
   PresetType,
+  VideoOutputOptions,
   ClipConcatInfo,
 } from './types';
 
@@ -24,6 +25,15 @@ export class MediaUtils {
   static TMP_DIRECTORY_PATH = 'moshh-util-tmp';
   static TMP_INPUT_FILE_PATH = 'tmpInput.txt';
   static DEFAULT_FADE_DURATION = 1.0;
+  static DEFAULT_VIDEO_OUTPUT_OPTIONS: VideoOutputOptions = {
+    preset: 'ultrafast',
+    pixelFormat: 'yuv420p',
+    videoCodec: 'libx264',
+    fps: 30000 / 1001,
+    width: 1080,
+    height: 1920,
+    excludeAudio: false,
+  };
 
   // private members
   static #localFileStore: ILocalFileStore | undefined;
@@ -42,6 +52,10 @@ export class MediaUtils {
 
   static getTmpPath(relativePath: string) {
     return this.TMP_DIRECTORY_PATH + '/' + relativePath;
+  }
+
+  static allOptions(options: VideoOutputOptions) {
+    return {...this.DEFAULT_VIDEO_OUTPUT_OPTIONS, ...options};
   }
 
   static getExecutionInfo() {
@@ -107,13 +121,14 @@ export class MediaUtils {
     return information;
   }
 
-  static async getVideoInfo(videoPath: string): Promise<VideoInfo> {
+  static async getVideoInformation(videoPath: string): Promise<VideoInfo> {
     const information = await this.getMediaInformation(videoPath);
     const vidStream = information.getStreams()[0];
 
     // Get the width/height
     const width = vidStream.getWidth();
     const height = vidStream.getHeight();
+    const duration = Number(information.getDuration());
 
     // get the rotation
     let rotation: number | undefined;
@@ -145,8 +160,11 @@ export class MediaUtils {
     return {
       width,
       height,
+      aspectRatio: width / height,
+      duration,
       effectiveWidth,
       effectiveHeight,
+      effectiveAspectRatio: effectiveWidth / effectiveHeight,
       rotation,
       fpsString,
       fps,
@@ -265,16 +283,37 @@ export class MediaUtils {
   static async generateThumbnail(
     videoPath: string,
     timestamp: number,
-    outputPath: string,
-    size?: [number, number],
+    options?: {
+      outputPath?: string;
+      size?: [number, number];
+    },
   ) {
     let cmd = `-ss ${timestamp} -i ${videoPath} `;
     cmd += '-vframes 1 ';
-    if (size) {
-      cmd += `-s ${size[0]}x${size[1]} `;
+    if (options && options.size) {
+      cmd += `-s ${options.size[0]}x${options.size[1]} `;
     }
+
+    // Check the output path
+    let outputPath = '';
+    if (!options || options.outputPath === undefined) {
+      const randNum = _.random(100, false);
+      outputPath = this.#localFileStore!.absolutePath(
+        this.getTmpPath(`thumb${randNum}.jpg`),
+      );
+    } else {
+      outputPath = options.outputPath;
+    }
+
     cmd += `-y ${outputPath}`;
-    return this.execute(cmd);
+    if (await this.execute(cmd)) {
+      return outputPath;
+    } else {
+      console.error(
+        'failed to generate thumbnail',
+        this.#executionInfo?.output,
+      );
+    }
   }
 
   static secsToTimestampString(seconds: number) {
@@ -296,17 +335,23 @@ export class MediaUtils {
     return `${hoursStr}:${minsStr}:${correctedSecsStr}.${msecsStr}`;
   }
 
-  static async createSubclip(
+  static async createSubClip(
     videoPath: string,
     outputPath: string,
     startTime: number,
     duration: number,
-    excludeAudio: boolean = true,
+    options = this.DEFAULT_VIDEO_OUTPUT_OPTIONS,
   ) {
-    const audioFlag = excludeAudio ? '-an' : '';
+    options = this.allOptions(options);
+    const audioFlag = options.excludeAudio ? '-an' : '';
     const startTimestamp = this.secsToTimestampString(startTime);
     const durationTimestamp = this.secsToTimestampString(duration);
-    const cmd = `-y -i "${videoPath}" -ss ${startTimestamp} -t ${durationTimestamp} -c copy ${audioFlag} "${outputPath}"`;
+
+    // compile the command
+    let cmd = `-y -ss ${startTimestamp} -t ${durationTimestamp} -i ${outputPath} `;
+    cmd += `-preset ${options.preset} -vcodec ${options.videoCodec} -pix_fmt ${options.pixelFormat} `;
+    cmd += `-r ${options.fps} -s ${options.width}x${options.height} `;
+    cmd += `${audioFlag} outputPath`;
     return this.execute(cmd);
   }
 
@@ -429,7 +474,6 @@ export class MediaUtils {
       switch (state) {
         case SessionState.RUNNING:
           // sleep
-          console.log('sleeping on main process');
           await new Promise(resolve => setTimeout(resolve, 5000));
           break;
         case SessionState.COMPLETED:

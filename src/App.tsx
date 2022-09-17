@@ -27,6 +27,7 @@ import {
   ProfileScreen,
   RecordScreen,
   CreateUserScreen,
+  MoshhGeneratorScreen,
 } from './screens';
 import MoshhIcon from './components/MoshhIcon';
 import {GlobalContext, GlobalContextType} from './contexts';
@@ -34,7 +35,7 @@ import VideoModal from './components/VideoModal';
 import {VideoController, UserController, UserInfo} from './controllers';
 import {RNFSFileStore, RealmDb} from './localStorage';
 import {CloudDbController, FirebaseDb, GCPCloudStorage} from './cloud';
-import {MediaUtils, ClipConcatInfo} from './utils/MediaUtils';
+import {MediaUtils} from './utils/MediaUtils';
 import {MoshhGenerator} from './utils/MoshhGenerator';
 
 const Tab = createMaterialBottomTabNavigator();
@@ -42,8 +43,6 @@ const Tab = createMaterialBottomTabNavigator();
 const App = () => {
   // Setup state variables
   const [currentUserInfo, setCurrentUserInfo] = useState<UserInfo | null>(null);
-  // const [userHandleValid, setUserHandleValid] = useState<boolean>(false);
-  // let [loginInfo, setLoginInfo] = useState<LoginInfo>();
   const [isConnected, setIsConnected] = useState(false);
   const [resourcesLoaded, setResourcesLoaded] = useState(false);
   const videoModalRef = useRef<VideoModal | null>(null);
@@ -62,46 +61,8 @@ const App = () => {
     const localFileStore = await RNFSFileStore.configure();
 
     // Connfigure the media utils and Moshh Generator
-    console.log('configure clean dir');
     await MediaUtils.configure(localFileStore!);
     await MoshhGenerator.configure(localFileStore!);
-
-    // Test the video functions
-    const fileDir =
-      '/Users/cool77catt/Projects/moshh/test-clips/should-I-stay-or-should-I-go';
-    const videoPath1 = fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B.mov';
-    // const videoPath2 =
-    //   fileDir + '/7405C001-AAE7-4BFA-A902-E3A982BD348B copy.mov';
-    const videoPath2 = fileDir + '/2EE85F61-681C-41A0-90F2-3BD2120412B0.mov';
-    const weights = [50, 50];
-    // const outputPath = fileDir + '/finalMoshh.mov';
-    // const success = await MoshhGenerator.generateMoshh(
-    //   [videoPath1, videoPath2],
-    //   weights,
-    //   outputPath,
-    //   {preset: 'ultrafast'},
-    // );
-    const vidInfo = await MediaUtils.getVideoInfo(videoPath1);
-    console.log(vidInfo);
-    console.log('rotation', vidInfo.rotation);
-    // const inputArray: ClipConcatInfo[] = [
-    //   {
-    //     videoPath: videoPath1,
-    //     startPointSecs: 10.0,
-    //     duration: 5.4,
-    //   },
-    //   {
-    //     videoPath: videoPath2,
-    //     startPointSecs: 20.0,
-    //     duration: 7.3,
-    //   },
-    // ];
-    // const success = await MediaUtils.clipConcatReencode(
-    //   inputArray,
-    //   outputPath,
-    //   'ultrafast',
-    // );
-    // console.log(success);
 
     // localFileStore
     //   ?.readDirectory('')
@@ -222,6 +183,41 @@ const App = () => {
     );
   };
 
+  const renderTabLayout = () => {
+    return (
+      <NavigationContainer>
+        <Tab.Navigator shifting={false} initialRouteName="Home">
+          {/* <Tab.Screen
+            name="Home"
+            component={HomeScreen}
+            options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
+          /> */}
+          <Tab.Screen
+            name="Search"
+            component={SearchScreen}
+            options={{tabBarIcon: 'magnify'}}
+          />
+          <Tab.Screen
+            name="Add"
+            component={RecordScreen}
+            options={{tabBarIcon: 'plus-circle-outline'}}
+          />
+          <Tab.Screen
+            name="Saved"
+            component={SavedScreen}
+            options={{tabBarIcon: 'content-save'}}
+          />
+          {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
+          <Tab.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{tabBarIcon: 'account-settings'}}
+          />
+        </Tab.Navigator>
+      </NavigationContainer>
+    );
+  };
+
   const renderMainComponent = () => {
     if (!resourcesLoaded) {
       return renderLoadingScreen();
@@ -238,46 +234,17 @@ const App = () => {
         </View>
       );
     } else {
-      return (
-        <NavigationContainer>
-          <Tab.Navigator shifting={false} initialRouteName="Home">
-            {/* <Tab.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{tabBarLabel: 'Home', tabBarIcon: 'home'}}
-            /> */}
-            <Tab.Screen
-              name="Search"
-              component={SearchScreen}
-              options={{tabBarIcon: 'magnify'}}
-            />
-            <Tab.Screen
-              name="Add"
-              component={RecordScreen}
-              options={{tabBarIcon: 'plus-circle-outline'}}
-            />
-            <Tab.Screen
-              name="Saved"
-              component={SavedScreen}
-              options={{tabBarIcon: 'content-save'}}
-            />
-            {/* <Tab.Screen name="Filter" component={FilterScreen} /> */}
-            <Tab.Screen
-              name="Profile"
-              component={ProfileScreen}
-              options={{tabBarIcon: 'account-settings'}}
-            />
-          </Tab.Navigator>
-        </NavigationContainer>
-      );
+      return renderTabLayout();
     }
   };
 
   return (
     <GlobalContext.Provider value={globalContextValue}>
       <SafeAreaView style={{flex: 1}}>
-        <PaperProvider theme={{...DefaultTheme, dark: false}}>
-          {renderMainComponent()}
+        <PaperProvider theme={{...DefaultTheme}}>
+          <View style={styles.mainContainer}>
+            {true ? <MoshhGeneratorScreen /> : renderMainComponent()}
+          </View>
         </PaperProvider>
       </SafeAreaView>
     </GlobalContext.Provider>
@@ -293,109 +260,3 @@ const styles = StyleSheet.create({
 });
 
 export default App;
-
-// import React from 'react';
-// import {
-//   SafeAreaView,
-//   ScrollView,
-//   StatusBar,
-//   StyleSheet,
-//   Text,
-//   useColorScheme,
-//   View,
-// } from 'react-native';
-
-// import {
-//   Colors,
-//   DebugInstructions,
-//   Header,
-//   LearnMoreLinks,
-//   ReloadInstructions,
-// } from 'react-native/Libraries/NewAppScreen';
-
-// const Section: React.FC<{
-//   title: string;
-// }> = ({children, title}) => {
-//   const isDarkMode = useColorScheme() === 'dark';
-//   return (
-//     <View style={styles.sectionContainer}>
-//       <Text
-//         style={[
-//           styles.sectionTitle,
-//           {
-//             color: isDarkMode ? Colors.white : Colors.black,
-//           },
-//         ]}>
-//         {title}
-//       </Text>
-//       <Text
-//         style={[
-//           styles.sectionDescription,
-//           {
-//             color: isDarkMode ? Colors.light : Colors.dark,
-//           },
-//         ]}>
-//         {children}
-//       </Text>
-//     </View>
-//   );
-// };
-
-// const App = () => {
-//   const isDarkMode = useColorScheme() === 'dark';
-
-//   const backgroundStyle = {
-//     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-//   };
-
-//   return (
-//     <SafeAreaView style={backgroundStyle}>
-//       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-//       <ScrollView
-//         contentInsetAdjustmentBehavior="automatic"
-//         style={backgroundStyle}>
-//         <Header />
-//         <View
-//           style={{
-//             backgroundColor: isDarkMode ? Colors.black : Colors.white,
-//           }}>
-//           <Section title="Step One">
-//             Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-//             screen and then come back to see your edits.
-//           </Section>
-//           <Section title="See Your Changes">
-//             <ReloadInstructions />
-//           </Section>
-//           <Section title="Debug">
-//             <DebugInstructions />
-//           </Section>
-//           <Section title="Learn More">
-//             Read the docs to discover what to do next:
-//           </Section>
-//           <LearnMoreLinks />
-//         </View>
-//       </ScrollView>
-//     </SafeAreaView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   sectionContainer: {
-//     marginTop: 32,
-//     paddingHorizontal: 24,
-//   },
-//   sectionTitle: {
-//     fontSize: 24,
-//     fontWeight: '600',
-//   },
-//   sectionDescription: {
-//     marginTop: 8,
-//     fontSize: 18,
-//     fontWeight: '400',
-//   },
-//   highlight: {
-//     fontWeight: '700',
-//   },
-// });
-
-// export default App;
