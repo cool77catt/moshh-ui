@@ -1,10 +1,9 @@
 import _ from 'lodash';
 import {ConstellationInfo, ConstellationManager} from '../ConstellationManager';
-import {MediaUtils, AudioFormatType, ClipConcatInfo} from '../MediaUtils';
+import {MediaUtils, AudioFormatType, VideoOutputOptions} from '../MediaUtils';
 import {ILocalFileStore} from '../../localStorage';
 import {
   MoshhGeneratorOptions,
-  MoshhGeneratorOutputOptions,
   MoshhGeneratorProgressCallback,
   MoshhGeneratorProgressStatus,
 } from './types';
@@ -19,6 +18,13 @@ async function assertMediaUtil(promise: Promise<boolean>) {
 export class MoshhGenerator {
   static TMP_DIRECTORY_PATH = 'moshh-gen-tmp';
   static AUDIO_FMT = 'wav';
+  static DEFAULT_MOSHH_OPTIONS: MoshhGeneratorOptions = {
+    minSubclipDuration: 4.0,
+    maxSubclipDuration: 6.0,
+    outputVideoFormat: 'mov',
+    preloadedConstellations: [],
+    statusCallback: null,
+  };
 
   static #localFileStore: ILocalFileStore | undefined;
 
@@ -28,6 +34,10 @@ export class MoshhGenerator {
     // Create the tmp directory (or clear out any remaining artifacts)
     await localFileStore.makeDirectory(this.TMP_DIRECTORY_PATH);
     await localFileStore.cleanDirectory(this.TMP_DIRECTORY_PATH);
+  }
+
+  static allOptions(options: MoshhGeneratorOptions) {
+    return {...this.DEFAULT_MOSHH_OPTIONS, ...options};
   }
 
   static getTmpRelativePath(relativePath: string) {
@@ -173,86 +183,123 @@ export class MoshhGenerator {
     return randIdx;
   }
 
+  static updateActiveVideos(offsets: [number, number][], currentTime: number) {
+    const activeIndices: number[] = [];
+    offsets.forEach(([start, end], idx) => {
+      if (start <= currentTime && end > currentTime) {
+        // Video is active, add it if it hasn't already been
+        activeIndices.push(idx);
+      }
+    });
+    return activeIndices;
+  }
+
   static async compileMoshhVideo(
     videoPaths: string[],
     weights: number[],
     offsets: [number, number][],
     outputPath: string,
-    minSubclipDuration: number,
-    maxSubclipDuration: number,
     {
-      preset = 'medium',
-      output_pix_fmt = 'yuv420p',
-      video_codec = 'libx264',
-      fps = 30000 / 1001,
-      width = 1080,
-      height = 1920,
-    }: MoshhGeneratorOutputOptions,
+      moshhOptions = this.DEFAULT_MOSHH_OPTIONS,
+      mediaOptions = MediaUtils.DEFAULT_VIDEO_OUTPUT_OPTIONS,
+    },
   ) {
     // Pre-compute some variables
-    const durationDiff = maxSubclipDuration - minSubclipDuration;
+    moshhOptions = this.allOptions(moshhOptions);
+    mediaOptions = MediaUtils.allOptions(mediaOptions);
     const maxDuration = Math.max(...offsets.map(o => o[1]));
+    const subclips: string[] = [];
 
-    // Build the timeline
-    let concatInputs: ClipConcatInfo[] = [];
-    let t = 0;
-    while (t < maxDuration) {
-      // Choose a random clip that aligns
-      let randIdx = -1;
-      while (true) {
-        randIdx = this.getRandomIndex(weights);
-        if (offsets[randIdx][0] <= t && offsets[randIdx][1] > t) {
-          break;
+    // zip the paths weights and offsets
+    const videoProcList = videoPaths.map((path, idx) => {
+      return {
+        path,
+        weight: weights[idx],
+        offset: offsets[idx],
+      };
+    });
+
+    try {
+      let t = 0;
+      while (t < maxDuration) {
+        // Determine which videos of the remaining videos fall within the current time range
+        const activeIndices = this.updateActiveVideos(
+          videoProcList.map(v => v.offset),
+          t,
+        );
+
+        // Choose a random clip that aligns
+        let randIdx = this.getRandomIndex(
+          activeIndices.map(i => videoProcList[i].weight),
+        );
+        const videoIdx = activeIndices[randIdx]; // Get the video index
+        const activeVideo = videoProcList[videoIdx];
+
+        // Compute the duration of the clip, based on random duration
+        // and remaining duration on the random video choice
+        let clipDuration;
+        const remainingDuration = activeVideo.offset[1] - t;
+        if (remainingDuration < moshhOptions.maxSubclipDuration!) {
+          clipDuration = remainingDuration;
+
+          // Remove the video from remaining videos as we have used up the last of it.
+          // Note, we are removing it because the rounding of computations could leave
+          // this video in the list if we go just off of comparing the start and end times
+          videoProcList.splice(videoIdx, 1);
+        } else {
+          clipDuration = _.random(
+            moshhOptions.minSubclipDuration!,
+            moshhOptions.maxSubclipDuration!,
+            true,
+          );
         }
+
+        // correct the offset to be local to the video, not global to the timeline
+        const correctedT = t - activeVideo.offset[0];
+
+        // Create the subclip
+        const randId = _.random(1e6, false);
+        const subclipPathAbs = this.#localFileStore!.absolutePath(
+          this.getTmpRelativePath(
+            `subclip_${randId}.${moshhOptions.outputVideoFormat}`,
+          ),
+        );
+        await assertMediaUtil(
+          MediaUtils.createSubClip(
+            activeVideo.path,
+            subclipPathAbs,
+            correctedT,
+            clipDuration,
+            mediaOptions,
+          ),
+        );
+
+        // Add the subclip
+        subclips.push(subclipPathAbs);
+
+        console.log(
+          `Clip: global_t ${t}, startPoint ${correctedT}, duration ${clipDuration}, video ${activeVideo.path}`,
+        );
+
+        // Read the actual duration of the subclip
+        const clipMeta = await MediaUtils.getVideoInformation(subclipPathAbs);
+        t += clipMeta.duration;
       }
 
-      // Compute the duration of the clip, based on random duration
-      // and remaining duration on the random video choice
-      let clipDuration;
-      const remainingDuration = offsets[randIdx][1] - t;
-      if (remainingDuration < maxSubclipDuration) {
-        clipDuration = remainingDuration;
-      } else {
-        clipDuration = Math.random() * durationDiff + minSubclipDuration;
+      // Concatenate the final video
+      await assertMediaUtil(MediaUtils.mergeVideoClips(subclips, outputPath));
+    } finally {
+      // Delete the subclips
+      for (let clip of subclips) {
+        await this.#localFileStore?.deleteFileAbs(clip);
       }
-
-      // correct the offset to be local to the video, not global to the timeline
-      const correctedT = t - offsets[randIdx][0];
-
-      // Save the input to the list
-      concatInputs.push({
-        videoPath: videoPaths[randIdx],
-        startPointSecs: correctedT,
-        duration: clipDuration,
-      });
-
-      console.log(
-        `Clip: global_t ${t}, startPoint ${correctedT}, duration ${clipDuration}, video ${videoPaths[randIdx]}`,
-      );
-
-      // Update the global point
-      t += clipDuration;
     }
-
-    // Clip, merge, and re-encode the clips
-    await assertMediaUtil(
-      MediaUtils.clipConcatReencode(
-        concatInputs,
-        outputPath,
-        preset,
-        output_pix_fmt,
-        video_codec,
-        fps,
-        width,
-        height,
-      ),
-    );
   }
 
   static async _handleStatus(
     message: string,
     status: MoshhGeneratorProgressStatus,
-    callback?: MoshhGeneratorProgressCallback,
+    callback?: MoshhGeneratorProgressCallback | null,
   ) {
     console.log(message);
     callback?.(status, message);
@@ -261,25 +308,26 @@ export class MoshhGenerator {
   static async generateMoshh(
     videoPaths: string[],
     weights: number[],
-    {
-      outputVideoPath,
-      minSubclipDuration = 4.0,
-      maxSubclipDuration = 6.0,
-      outputVideoFormat = 'mov',
-      preloadedConstellations = [],
-      preset = 'medium',
-      output_pix_fmt = 'yuv420p',
-      video_codec = 'libx264',
-      fps = 30000 / 1001,
-      width = 1080,
-      height = 1920,
-      statusCallback,
-    }: MoshhGeneratorOptions & MoshhGeneratorOutputOptions = {},
-  ) {
+    outputVideoPath: string | null = null,
+    options?: {
+      moshhOptions?: MoshhGeneratorOptions;
+      mediaOptions?: VideoOutputOptions;
+    },
+  ): Promise<string | null> {
     // Validate the inputs
     if (videoPaths.length <= 1) {
       throw 'Not enough videos';
     }
+    if (weights.filter(w => w <= 0).length > 0) {
+      throw 'Invalid weight(s)';
+    }
+
+    const moshhOptions = this.allOptions(
+      options && options.moshhOptions ? options.moshhOptions : {},
+    );
+    const mediaOptions = MediaUtils.allOptions(
+      options && options.mediaOptions ? options.mediaOptions : {},
+    );
 
     let tmpFileRelPaths: string[] = [];
     let finalOutputPath = outputVideoPath; // Initialize the final output as the input param. If its undefined, it will be replaced
@@ -295,7 +343,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'Extracting Audios',
         MoshhGeneratorProgressStatus.ExtractingAudio,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       const audioRelPaths = await this.extractAudios(videoPaths);
       tmpFileRelPaths.concat(audioRelPaths);
@@ -304,10 +352,10 @@ export class MoshhGenerator {
       this._handleStatus(
         'generating constellations',
         MoshhGeneratorProgressStatus.GeneratingConstellations,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       let constellations: ConstellationInfo[] = [];
-      if (preloadedConstellations.length === 0) {
+      if (moshhOptions.preloadedConstellations!.length === 0) {
         for (let path of audioRelPaths) {
           const constellation =
             await ConstellationManager.generateConstellation(
@@ -316,14 +364,14 @@ export class MoshhGenerator {
           constellations.push(constellation);
         }
       } else {
-        constellations = preloadedConstellations;
+        constellations = moshhOptions.preloadedConstellations!;
       }
 
       // Get the global offsets
       this._handleStatus(
         'calculating offsets',
         MoshhGeneratorProgressStatus.CalculatingOffsets,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       const durations = mediaInfos.map(info => Number(info.getDuration()));
       const globalOffsets = this.computeGlobalOffsets(
@@ -337,26 +385,20 @@ export class MoshhGenerator {
       this._handleStatus(
         'compiling video',
         MoshhGeneratorProgressStatus.CompilingVideo,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       const startTime = Date.now();
       const videoCompilationRelPath = this.getTmpRelativePath(
-        `vidComp.${outputVideoFormat}`,
+        `vidComp.${moshhOptions.outputVideoFormat}`,
       );
       await this.compileMoshhVideo(
         videoPaths,
         weights,
         globalOffsets,
         this.#localFileStore!.absolutePath(videoCompilationRelPath),
-        minSubclipDuration,
-        maxSubclipDuration,
         {
-          preset,
-          output_pix_fmt,
-          video_codec,
-          fps,
-          width,
-          height,
+          moshhOptions,
+          mediaOptions,
         },
       );
       tmpFileRelPaths.push(videoCompilationRelPath);
@@ -367,7 +409,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'fading audios',
         MoshhGeneratorProgressStatus.FadingAudios,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       const fadedPaths = await this.fadeAudios(audioRelPaths);
       tmpFileRelPaths.concat(fadedPaths);
@@ -376,7 +418,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'Merging Audio Files',
         MoshhGeneratorProgressStatus.MergingAudios,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       const mergedAudioRelPath = this.getTmpRelativePath(
         `merged_audio.${this.AUDIO_FMT}`,
@@ -391,10 +433,11 @@ export class MoshhGenerator {
       tmpFileRelPaths.push(mergedAudioRelPath);
 
       // Compile the outpath path
-      if (finalOutputPath === undefined) {
+      if (finalOutputPath === null) {
+        const ext = moshhOptions.outputVideoFormat!;
         const randNum = _.random(1e6, false);
         finalOutputPath = this.#localFileStore!.absolutePath(
-          this.getTmpRelativePath(`moshh${randNum}.jpg`),
+          this.getTmpRelativePath(`moshh${randNum}.${ext}`),
         );
       }
 
@@ -402,7 +445,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'overlaying audios',
         MoshhGeneratorProgressStatus.OverlayingAudios,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       await assertMediaUtil(
         MediaUtils.overlayAudioOnVideo(
@@ -419,7 +462,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'cleaning up tmp files',
         MoshhGeneratorProgressStatus.CleaningUp,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
       for (let p of tmpFileRelPaths) {
         this.#localFileStore?.deleteFile(p);
@@ -429,7 +472,7 @@ export class MoshhGenerator {
       this._handleStatus(
         'finished',
         MoshhGeneratorProgressStatus.Finished,
-        statusCallback,
+        moshhOptions.statusCallback,
       );
     }
 

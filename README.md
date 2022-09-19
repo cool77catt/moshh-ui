@@ -13,7 +13,15 @@ Note: some require --legacy-peer-deps flag passed into "npm install"
 
 # To run on iOS
 
+```
 npx react-native run-ios
+npx react-native run-ios --simulator="iPhone 13 Pro"
+```
+
+List devices with:
+```
+xcrun simctl list devices
+```
 
 # Deploy to Test Flight
 * Open in XCode

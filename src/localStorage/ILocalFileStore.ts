@@ -18,4 +18,5 @@ export interface ILocalFileStore {
   readBinaryFile: (relativeDstPath: string) => Promise<Buffer>;
   readDirectory: (relativeDirPath: string) => Promise<LocalReadDirItem[]>;
   deleteFile: (relativeFilePath: string) => Promise<void>;
+  deleteFileAbs: (absoluteFilePath: string) => Promise<void>;
 }

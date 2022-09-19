@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {ScrollView, StyleSheet} from 'react-native';
+import {ScrollView, StyleSheet, View} from 'react-native';
 import {Avatar, IconButton, List, Menu} from 'react-native-paper';
 import {MoshhVideoInfo} from './types';
 
@@ -26,11 +26,13 @@ const TimelineCanvas = (props: TimelineCanvasProps) => {
         visible={menuVisibleIdx === idx}
         onDismiss={() => setMenuVisibleIdx(-1)}
         anchor={
-          <IconButton
-            icon="dots-vertical"
-            size={24}
-            onPress={() => setMenuVisibleIdx(idx)}
-          />
+          <View style={styles.centeredContainer}>
+            <IconButton
+              icon="dots-vertical"
+              size={24}
+              onPress={() => setMenuVisibleIdx(idx)}
+            />
+          </View>
         }>
         <Menu.Item onPress={() => menuDeletePressed(idx)} title="Remove" />
       </Menu>
@@ -65,7 +67,9 @@ const TimelineCanvas = (props: TimelineCanvasProps) => {
               description={desc}
               titleStyle={styles.titleStyle}
               left={() => (
-                <Avatar.Image size={48} source={{uri: videoInfo.thumbnail}} />
+                <View style={styles.centeredContainer}>
+                  <Avatar.Image size={48} source={{uri: videoInfo.thumbnail}} />
+                </View>
               )}
               right={() => renderMenuItem(idx)}
             />
@@ -77,6 +81,9 @@ const TimelineCanvas = (props: TimelineCanvasProps) => {
 };
 
 const styles = StyleSheet.create({
+  centeredContainer: {
+    justifyContent: 'center',
+  },
   listContainer: {
     flex: 1,
     width: '100%',

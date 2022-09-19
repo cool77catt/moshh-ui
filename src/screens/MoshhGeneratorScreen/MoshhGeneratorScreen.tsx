@@ -10,7 +10,12 @@ import {FileSourceDialog, LoadingDialog} from '../../components';
 import {fetchVideoInfo} from './utils';
 import TimelineCanvas from './TimelineCanvas';
 import {MoshhVideoInfo} from './types';
-import {MoshhGenerator, MoshhGeneratorProgressStatus} from '../../utils';
+import {
+  MoshhGenerator,
+  MoshhGeneratorProgressStatus,
+  MoshhGeneratorOptions,
+  VideoOutputOptions,
+} from '../../utils';
 
 const MoshhGeneratorScreen = () => {
   const [isLoadingInputs, setIsLoadingInputs] = useState(false);
@@ -86,9 +91,34 @@ const MoshhGeneratorScreen = () => {
     setIsGeneratingMoshh(true);
     setGeneratingMoshhStatus('Generating Moshh...');
     try {
-      const outputPath = await MoshhGenerator.generateMoshh(inputs, weights, {
+      const moshhOptions: MoshhGeneratorOptions = {
+        minSubclipDuration: 4.0,
+        maxSubclipDuration: 6.0,
+        outputVideoFormat: 'mov',
+        preloadedConstellations: [],
         statusCallback: onMoshhGeneratorStatus,
-      });
+      };
+
+      const mediaOptions: VideoOutputOptions = {
+        preset: 'ultrafast',
+        pixelFormat: 'yuv420p',
+        videoCodec: 'libx264',
+        fps: 30000 / 1001,
+        width: 1080,
+        height: 1920,
+        excludeAudio: false,
+      };
+
+      console.debug('Generating Moshh');
+      const startTime = Date.now();
+      const outputPath = await MoshhGenerator.generateMoshh(
+        inputs,
+        weights,
+        null,
+        {moshhOptions, mediaOptions},
+      );
+      console.debug('moshh done', Date.now() - startTime);
+
       console.log('mossh created, path: ', outputPath);
       if (!outputPath) {
         Alert.alert('Error', 'Failed to create Moshh...');
@@ -133,8 +163,8 @@ const MoshhGeneratorScreen = () => {
         <View style={styles.timelineButtonsContainer}>
           <IconButton
             icon="plus-box"
-            // onPress={() => onGallerySelected()}
-            onPress={() => setChooseFileSource(true)}
+            onPress={() => onGallerySelected()}
+            // onPress={() => setChooseFileSource(true)}
             size={36}
           />
         </View>

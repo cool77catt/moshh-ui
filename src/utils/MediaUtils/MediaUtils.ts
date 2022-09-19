@@ -16,7 +16,6 @@ import {
   ExecutionInfo,
   AudioData,
   VideoInfo,
-  PresetType,
   VideoOutputOptions,
   ClipConcatInfo,
 } from './types';
@@ -143,8 +142,8 @@ export class MediaUtils {
         effectiveWidth = height;
         effectiveHeight = width;
       }
-    } catch (err) {
-      console.error('Error getting rotation', err);
+    } catch {
+      console.debug('No rotation information', videoPath);
     }
 
     // Get the fps
@@ -348,10 +347,10 @@ export class MediaUtils {
     const durationTimestamp = this.secsToTimestampString(duration);
 
     // compile the command
-    let cmd = `-y -ss ${startTimestamp} -t ${durationTimestamp} -i ${outputPath} `;
+    let cmd = `-y -ss ${startTimestamp} -t ${durationTimestamp} -i "${videoPath}" `;
     cmd += `-preset ${options.preset} -vcodec ${options.videoCodec} -pix_fmt ${options.pixelFormat} `;
     cmd += `-r ${options.fps} -s ${options.width}x${options.height} `;
-    cmd += `${audioFlag} outputPath`;
+    cmd += `${audioFlag} "${outputPath}"`;
     return this.execute(cmd);
   }
 
@@ -360,10 +359,12 @@ export class MediaUtils {
     const fileContents = clipPaths.map(path => `file '${path}'`).join('\n');
 
     // Write the input file to be used with ffmpeg
+    console.log('merge writing merge file', tmpFilePath);
     const absInputPath = await this.#localFileStore!.writeFile(
       tmpFilePath,
       fileContents,
     );
+    console.log('merge wrote merge file', absInputPath);
 
     // Compile the command
     const cmd = `-y -f concat -safe 0 -i "${absInputPath}" -c copy "${outputPath}"`;
@@ -387,15 +388,13 @@ export class MediaUtils {
   static async clipConcatReencode(
     inputArray: ClipConcatInfo[],
     outputPath: string,
-    preset: PresetType = 'medium',
-    output_pix_fmt = 'yuv420p',
-    video_codec = 'libx264',
-    fps = 30000 / 1001,
-    width = 1080,
-    height = 1920,
+    options = this.DEFAULT_VIDEO_OUTPUT_OPTIONS,
   ) {
+    // Fill in gaps with defaults
+    options = this.allOptions(options);
+
     // setup constants
-    const input_pix_fmt = 'rgb24';
+    const inputPixelFormat = 'rgb24';
 
     // Create the pipes
     const pipes = await Promise.all(
@@ -410,9 +409,9 @@ export class MediaUtils {
         // Create the input section of the output command
         let cmd = '';
         cmd += '-f rawvideo -vcodec rawvideo ';
-        cmd += `-s ${width}x${height} `;
-        cmd += `-pix_fmt ${input_pix_fmt} `;
-        cmd += `-r ${fps} `;
+        cmd += `-s ${options.width}x${options.height} `;
+        cmd += `-pix_fmt ${inputPixelFormat} `;
+        cmd += `-r ${options.fps} `;
         cmd += `-an -i "${pipes[idx]}" `;
         return cmd;
       })
@@ -423,7 +422,7 @@ export class MediaUtils {
       .map(idx => `[${idx}]`)
       .join('');
     outputCmd += `-filter_complex "${concatInputStr}concat=n=${pipes.length}:v=1:a=0" `;
-    outputCmd += `-vcodec ${video_codec} -preset ${preset} -pix_fmt ${output_pix_fmt} `;
+    outputCmd += `-vcodec ${options.videoCodec} -preset ${options.preset} -pix_fmt ${options.pixelFormat} `;
     outputCmd += `${outputPath} -y`;
     console.log('executing main session');
     console.log(outputCmd);
@@ -434,13 +433,13 @@ export class MediaUtils {
     let cumDuration = 0;
     for (let [idx, input] of inputArray.entries()) {
       cumDuration += input.duration;
-      const endPointFrames = cumDuration * fps;
+      const endPointFrames = cumDuration * options.fps!;
       const durationFrames = Math.floor(endPointFrames - fCount);
 
       // Create the pipe
       let cmd = `-ss ${input.startPointSecs} -i ${input.videoPath} `;
       cmd += '-f image2pipe ';
-      cmd += `-pix_fmt ${input_pix_fmt} `;
+      cmd += `-pix_fmt ${inputPixelFormat} `;
       cmd += `-an -c:v rawvideo -frames ${durationFrames} `;
       cmd += `-y "${pipes[idx]}"`;
 

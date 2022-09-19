@@ -1,15 +1,6 @@
 import {ConstellationInfo} from '../ConstellationManager';
 import {PresetType, PixelFormat, VideoCodec} from '../MediaUtils';
 
-export type MoshhGeneratorOptions = {
-  outputVideoPath?: string;
-  minSubclipDuration?: number;
-  maxSubclipDuration?: number;
-  outputVideoFormat?: string;
-  preloadedConstellations?: ConstellationInfo[];
-  statusCallback?: MoshhGeneratorProgressCallback;
-};
-
 export type MoshhGeneratorOutputOptions = {
   preset?: PresetType;
   output_pix_fmt?: PixelFormat;
@@ -35,3 +26,13 @@ export type MoshhGeneratorProgressCallback = (
   status: MoshhGeneratorProgressStatus,
   statusMessage: string,
 ) => void;
+
+export type MoshhOutputVideoFormat = 'mov';
+
+export type MoshhGeneratorOptions = {
+  minSubclipDuration?: number;
+  maxSubclipDuration?: number;
+  outputVideoFormat?: MoshhOutputVideoFormat;
+  preloadedConstellations?: ConstellationInfo[];
+  statusCallback?: MoshhGeneratorProgressCallback | null;
+};

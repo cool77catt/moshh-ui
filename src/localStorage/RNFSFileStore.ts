@@ -98,7 +98,11 @@ class RNFSFileStore implements ILocalFileStore {
   }
 
   deleteFile(relativeFilePath: string) {
-    return RNFS.unlink(this.absolutePath(relativeFilePath));
+    return this.deleteFileAbs(this.absolutePath(relativeFilePath));
+  }
+
+  deleteFileAbs(absoluteFilePath: string) {
+    return RNFS.unlink(absoluteFilePath);
   }
 }
 
