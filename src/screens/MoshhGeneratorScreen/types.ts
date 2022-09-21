@@ -3,6 +3,6 @@ import {VideoInfo} from '../../utils';
 export type MoshhVideoInfo = {
   path: string;
   mediaInfo: VideoInfo;
-  // weight: number;
+  weight: number;
   thumbnail?: string;
 };

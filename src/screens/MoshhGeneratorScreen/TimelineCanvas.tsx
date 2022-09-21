@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {ScrollView, StyleSheet, View} from 'react-native';
-import {Avatar, IconButton, List, Menu} from 'react-native-paper';
+import {Avatar, Button, Dialog, List, Portal} from 'react-native-paper';
 import {MoshhVideoInfo} from './types';
 
 export type TimelineCanvasProps = {
@@ -20,67 +20,76 @@ const TimelineCanvas = (props: TimelineCanvasProps) => {
     props.onVideoRemove?.(props.videoInfoList[idx]);
   };
 
-  const renderMenuItem = (idx: number) => {
-    return (
-      <Menu
-        visible={menuVisibleIdx === idx}
-        onDismiss={() => setMenuVisibleIdx(-1)}
-        anchor={
-          <View style={styles.centeredContainer}>
-            <IconButton
-              icon="dots-vertical"
-              size={24}
-              onPress={() => setMenuVisibleIdx(idx)}
-            />
-          </View>
-        }>
-        <Menu.Item onPress={() => menuDeletePressed(idx)} title="Remove" />
-      </Menu>
-    );
-  };
-
   return (
-    <ScrollView style={styles.listContainer}>
-      <List.Section style={styles.listContainer}>
-        {props.videoInfoList.map((videoInfo, idx) => {
-          // Break the time into mins:secs.milliseonds
-          let duration = videoInfo.mediaInfo.duration;
-          const mins = Math.floor(duration / 60);
-          duration -= mins * 60;
-          const secs = Math.floor(duration);
-          duration -= secs;
-          const msecs = Math.floor(duration * 1000);
+    <View style={styles.mainContainer}>
+      <Portal>
+        <Dialog
+          visible={menuVisibleIdx >= 0}
+          onDismiss={() => setMenuVisibleIdx(-1)}>
+          <Dialog.Content>
+            <Button
+              mode="contained"
+              onPress={() => menuDeletePressed(menuVisibleIdx)}>
+              Remove
+            </Button>
+          </Dialog.Content>
+        </Dialog>
+      </Portal>
+      <ScrollView style={styles.listContainer}>
+        <List.Section style={styles.listContainer}>
+          {props.videoInfoList.map((videoInfo, idx) => {
+            // Break the time into mins:secs.milliseonds
+            let duration = videoInfo.mediaInfo.duration;
+            const mins = Math.floor(duration / 60);
+            duration -= mins * 60;
+            const secs = Math.floor(duration);
+            duration -= secs;
+            const msecs = Math.floor(duration * 1000);
 
-          const desc = [
-            `${videoInfo.mediaInfo.effectiveWidth}x${videoInfo.mediaInfo.effectiveHeight}`,
-            `${intToStrPadded(mins, 2)}:${intToStrPadded(
-              secs,
-              2,
-            )}.${intToStrPadded(msecs, 3)}`,
-            `${videoInfo.mediaInfo.fps.toFixed(2)} fps`,
-          ].join('  ');
+            const desc = [
+              `${videoInfo.mediaInfo.effectiveWidth}x${videoInfo.mediaInfo.effectiveHeight}`,
+              `${intToStrPadded(mins, 2)}:${intToStrPadded(
+                secs,
+                2,
+              )}.${intToStrPadded(msecs, 3)}`,
+              `${videoInfo.mediaInfo.fps.toFixed(2)} fps`,
+            ].join('  ');
 
-          return (
-            <List.Item
-              key={idx}
-              title={`Input ${idx + 1}`}
-              description={desc}
-              titleStyle={styles.titleStyle}
-              left={() => (
-                <View style={styles.centeredContainer}>
-                  <Avatar.Image size={48} source={{uri: videoInfo.thumbnail}} />
-                </View>
-              )}
-              right={() => renderMenuItem(idx)}
-            />
-          );
-        })}
-      </List.Section>
-    </ScrollView>
+            return (
+              <List.Item
+                key={idx}
+                title={`Input ${idx + 1}`}
+                description={desc}
+                titleStyle={styles.titleStyle}
+                left={() => (
+                  <View style={styles.centeredContainer}>
+                    <Avatar.Image
+                      size={48}
+                      source={{uri: videoInfo.thumbnail}}
+                    />
+                  </View>
+                )}
+                right={() => (
+                  <View style={styles.centeredContainer}>
+                    <Button mode="text">{videoInfo.weight}</Button>
+                  </View>
+                )}
+                onPress={() => console.log('pressed')}
+                onLongPress={() => setMenuVisibleIdx(idx)}
+              />
+            );
+          })}
+        </List.Section>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    width: '100%',
+  },
   centeredContainer: {
     justifyContent: 'center',
   },

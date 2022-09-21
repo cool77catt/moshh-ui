@@ -28,6 +28,7 @@ export async function fetchVideoInfo(
   // And the info to the map, then add the main list which determines render order
   return {
     path: videoPath,
+    weight: 1,
     mediaInfo: videoInfo,
     thumbnail,
   };
