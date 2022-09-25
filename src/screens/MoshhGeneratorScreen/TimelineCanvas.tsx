@@ -6,6 +6,7 @@ import {MoshhVideoInfo} from './types';
 export type TimelineCanvasProps = {
   videoInfoList: MoshhVideoInfo[];
   onVideoRemove?: (videoInfo: MoshhVideoInfo) => void;
+  onVideoPressed?: (videoInfo: MoshhVideoInfo) => void;
 };
 
 function intToStrPadded(value: number, padCount: number) {
@@ -71,10 +72,14 @@ const TimelineCanvas = (props: TimelineCanvasProps) => {
                 )}
                 right={() => (
                   <View style={styles.centeredContainer}>
-                    <Button mode="text">{videoInfo.weight}</Button>
+                    <Button
+                      mode="text"
+                      onPress={() => console.log('pressed b')}>
+                      {`W: ${videoInfo.weight}`}
+                    </Button>
                   </View>
                 )}
-                onPress={() => console.log('pressed')}
+                onPress={() => props.onVideoPressed?.(videoInfo)}
                 onLongPress={() => setMenuVisibleIdx(idx)}
               />
             );
@@ -92,6 +97,7 @@ const styles = StyleSheet.create({
   },
   centeredContainer: {
     justifyContent: 'center',
+    // borderWidth: 2,
   },
   listContainer: {
     flex: 1,

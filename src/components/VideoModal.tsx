@@ -1,8 +1,7 @@
 import React, {createRef} from 'react';
 import {StyleSheet, View} from 'react-native';
 import {Portal, Modal, FAB} from 'react-native-paper';
-import VideoPlayer, {VideoPlayerProps} from '../components/VideoPlayer';
-import {GlobalContext} from '../contexts';
+import VideoPlayer, {VideoPlayerProps} from './VideoPlayer';
 
 interface VideoModalProps extends VideoPlayerProps {
   visible: boolean;
@@ -10,7 +9,6 @@ interface VideoModalProps extends VideoPlayerProps {
 }
 
 class VideoModal extends React.Component<VideoModalProps> {
-  static contextType = GlobalContext;
   _playerRef = createRef<VideoPlayer>();
 
   componentDidMount() {

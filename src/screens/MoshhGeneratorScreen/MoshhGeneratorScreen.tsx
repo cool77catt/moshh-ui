@@ -1,28 +1,41 @@
 import React, {useState, useRef} from 'react';
-import {StyleSheet, Text, View, Alert} from 'react-native';
+import {StyleSheet, View, Alert} from 'react-native';
 import {Button, IconButton} from 'react-native-paper';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {CameraRoll} from '@react-native-camera-roll/camera-roll';
 import DocumentPicker, {
   types as DocumentPickerTypes,
 } from 'react-native-document-picker';
-import {FileSourceDialog, LoadingDialog} from '../../components';
+import {
+  FileSourceDialog,
+  LoadingDialog,
+  ProgressDialog,
+  VideoPlayer,
+} from '../../components';
 import {fetchVideoInfo} from './utils';
 import TimelineCanvas from './TimelineCanvas';
 import {MoshhVideoInfo} from './types';
 import {
   MoshhGenerator,
-  MoshhGeneratorProgressStatus,
+  MoshhGeneratorStage,
   MoshhGeneratorOptions,
   VideoOutputOptions,
 } from '../../utils';
 
+type _MoshhStatus = {
+  progress: number;
+  status: string;
+};
+
 const MoshhGeneratorScreen = () => {
   const [isLoadingInputs, setIsLoadingInputs] = useState(false);
-  const [isGeneratingMoshh, setIsGeneratingMoshh] = useState(false);
-  const [generatingMoshhStatus, setGeneratingMoshhStatus] = useState('');
+  const [generatingMoshhStatus, setGeneratingMoshhStatus] =
+    useState<_MoshhStatus | null>(null);
   const [chooseFileSource, setChooseFileSource] = useState(false);
   const [inputs, setInputs] = useState<string[]>([]);
+  const [videoPreview, setVideoPreview] = useState<string | undefined>(
+    undefined,
+  );
   const inputInfoMapRef = useRef<Map<string, MoshhVideoInfo>>(
     new Map<string, MoshhVideoInfo>(),
   );
@@ -79,17 +92,23 @@ const MoshhGeneratorScreen = () => {
   };
 
   const onMoshhGeneratorStatus = (
-    status: MoshhGeneratorProgressStatus,
+    stage: MoshhGeneratorStage,
+    progress: number,
     message: string,
   ) => {
-    setGeneratingMoshhStatus(message);
+    setGeneratingMoshhStatus({
+      progress,
+      status: message,
+    });
   };
 
   const onGenerateMoshhPressed = async () => {
     const weights = Array<number>(inputs.length).fill(1);
 
-    setIsGeneratingMoshh(true);
-    setGeneratingMoshhStatus('Generating Moshh...');
+    setGeneratingMoshhStatus({
+      progress: 0,
+      status: 'Generating moshh...',
+    });
     try {
       const moshhOptions: MoshhGeneratorOptions = {
         minSubclipDuration: 4.0,
@@ -125,7 +144,10 @@ const MoshhGeneratorScreen = () => {
         console.error('Failed to create moshh');
       } else {
         // Move to the gallery
-        setGeneratingMoshhStatus('Saving to gallery...');
+        setGeneratingMoshhStatus({
+          progress: 0,
+          status: 'Saving to gallery..',
+        });
         await CameraRoll.save(outputPath, {type: 'video'});
 
         // Delete the tmp file
@@ -137,7 +159,7 @@ const MoshhGeneratorScreen = () => {
     } catch (err) {
       Alert.alert('Error', `Error generating moshh: ${err}`);
     } finally {
-      setIsGeneratingMoshh(false);
+      setGeneratingMoshhStatus(null);
     }
   };
 
@@ -146,9 +168,10 @@ const MoshhGeneratorScreen = () => {
   return (
     <View style={styles.mainContainer}>
       <LoadingDialog visible={isLoadingInputs} message={'Loading inputs...'} />
-      <LoadingDialog
-        visible={isGeneratingMoshh}
-        message={generatingMoshhStatus}
+      <ProgressDialog
+        visible={generatingMoshhStatus !== null}
+        progress={generatingMoshhStatus?.progress}
+        message={generatingMoshhStatus?.status}
       />
       <FileSourceDialog
         visible={chooseFileSource}
@@ -157,7 +180,7 @@ const MoshhGeneratorScreen = () => {
         onGallerySelected={() => onGallerySelected()}
       />
       <View style={styles.previewContainer}>
-        <Text>Preview!!</Text>
+        <VideoPlayer source={videoPreview} />
       </View>
       <View style={styles.inputContainer}>
         <View style={styles.timelineButtonsContainer}>
@@ -171,6 +194,7 @@ const MoshhGeneratorScreen = () => {
         <View style={styles.timelineContainer}>
           <TimelineCanvas
             videoInfoList={timelineInputs}
+            onVideoPressed={vidInfo => setVideoPreview(vidInfo.path)}
             onVideoRemove={vidInfo => removeVideo(vidInfo)}
           />
         </View>

@@ -1,12 +1,10 @@
-import React, {useState, useRef, createRef} from 'react';
+import React, {createRef} from 'react';
 import {StyleSheet, View, ViewStyle, Pressable} from 'react-native';
-import {IconButton, Colors, Text} from 'react-native-paper';
+import {IconButton, Colors} from 'react-native-paper';
 import Video, {VideoProperties} from 'react-native-video';
-// import {NodePlayerView} from 'react-native-nodemediaclient';
-// import {default as RNVideoPlayer} from 'react-native-video-player';
 
 export interface VideoPlayerProps extends Omit<VideoProperties, 'source'> {
-  source: string;
+  source?: string;
 }
 
 export interface StateType {
@@ -18,25 +16,12 @@ class VideoPlayer extends React.Component<VideoPlayerProps, StateType> {
     playState: true,
   };
   playerRef = createRef<Video>();
-  // playerRef = createRef<NodePlayerView>();
 
   start() {
-    if (!this.state.playState) {
-      // this.playerRef.current.start();
-    }
-
     this.setState({playState: true});
   }
 
-  // stop() {
-  //   this.playerRef.current.stop();
-  // }
-
   pause() {
-    if (this.state.playState) {
-      // this.playerRef.current.pause();
-    }
-
     this.setState({playState: false});
   }
 
@@ -59,26 +44,18 @@ class VideoPlayer extends React.Component<VideoPlayerProps, StateType> {
   }
 
   render() {
-    console.log(this.props.source, this.state.playState);
     return (
       <View style={styles.mainContainer}>
         <View style={styles.stackedViewStyle}>
-          <Video
-            {...this.props}
-            source={{uri: this.props.source}}
-            paused={!this.state.playState}
-            style={styles.playerStyle}
-            ref={this.playerRef}
-          />
-          {/* <NodePlayerView
-            style={styles.playerStyle}
-            ref={this.playerRef}
-            inputUrl={this.props.source}
-            scaleMode={'ScaleAspectFit'}
-            bufferTime={300}
-            maxBufferTime={1000}
-            autoplay={true}
-          /> */}
+          {this.props.source && (
+            <Video
+              {...this.props}
+              source={{uri: this.props.source}}
+              paused={!this.state.playState}
+              style={styles.playerStyle}
+              ref={this.playerRef}
+            />
+          )}
         </View>
         <Pressable
           style={styles.pressableStyle}

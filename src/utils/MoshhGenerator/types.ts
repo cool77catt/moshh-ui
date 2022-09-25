@@ -10,7 +10,7 @@ export type MoshhGeneratorOutputOptions = {
   height?: number;
 };
 
-export enum MoshhGeneratorProgressStatus {
+export enum MoshhGeneratorStage {
   ExtractingAudio,
   GeneratingConstellations,
   CalculatingOffsets,
@@ -22,8 +22,9 @@ export enum MoshhGeneratorProgressStatus {
   Finished,
 }
 
-export type MoshhGeneratorProgressCallback = (
-  status: MoshhGeneratorProgressStatus,
+export type MoshhGeneratorStatusCallback = (
+  stage: MoshhGeneratorStage,
+  progress: number, // 0-100%
   statusMessage: string,
 ) => void;
 
@@ -34,5 +35,5 @@ export type MoshhGeneratorOptions = {
   maxSubclipDuration?: number;
   outputVideoFormat?: MoshhOutputVideoFormat;
   preloadedConstellations?: ConstellationInfo[];
-  statusCallback?: MoshhGeneratorProgressCallback | null;
+  statusCallback?: MoshhGeneratorStatusCallback | null;
 };

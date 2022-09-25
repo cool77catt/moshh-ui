@@ -4,8 +4,8 @@ import {MediaUtils, AudioFormatType, VideoOutputOptions} from '../MediaUtils';
 import {ILocalFileStore} from '../../localStorage';
 import {
   MoshhGeneratorOptions,
-  MoshhGeneratorProgressCallback,
-  MoshhGeneratorProgressStatus,
+  MoshhGeneratorStatusCallback,
+  MoshhGeneratorStage,
 } from './types';
 
 async function assertMediaUtil(promise: Promise<boolean>) {
@@ -44,12 +44,33 @@ export class MoshhGenerator {
     return this.TMP_DIRECTORY_PATH + '/' + relativePath;
   }
 
-  static async extractAudios(videoPaths: string[]): Promise<string[]> {
+  static async _handleStatus(
+    stage: MoshhGeneratorStage,
+    progress: number,
+    message: string,
+    callback?: MoshhGeneratorStatusCallback | null,
+  ) {
+    console.debug(stage, progress, message);
+    callback?.(stage, progress, message);
+  }
+
+  static async extractAudios(
+    videoPaths: string[],
+    statusCallback?: MoshhGeneratorStatusCallback | null,
+  ): Promise<string[]> {
     let audioRelPaths: string[] = [];
 
     try {
       for (let idx = 0; idx < videoPaths.length; idx++) {
         const vidPath = videoPaths[idx];
+
+        // Update the status
+        this._handleStatus(
+          MoshhGeneratorStage.ExtractingAudio,
+          (idx / videoPaths.length) * 100,
+          `Extracting audio ${idx + 1} of ${videoPaths.length}...`,
+          statusCallback,
+        );
 
         // Extract Audio
         const audioRelPath = this.getTmpRelativePath(
@@ -78,10 +99,21 @@ export class MoshhGenerator {
     return audioRelPaths;
   }
 
-  static async fadeAudios(audioRelPaths: string[]) {
+  static async fadeAudios(
+    audioRelPaths: string[],
+    statusCallback?: MoshhGeneratorStatusCallback | null,
+  ) {
     let outputPaths: string[] = [];
     try {
       for (let i = 0; i < audioRelPaths.length; i++) {
+        // Update the status
+        this._handleStatus(
+          MoshhGeneratorStage.FadingAudios,
+          (i / audioRelPaths.length) * 100,
+          `Fading audio ${i + 1} of ${audioRelPaths.length}...`,
+          statusCallback,
+        );
+
         const inputRelPath = audioRelPaths[i];
         const outputRelPath = this.getTmpRelativePath(
           `faded_audio_${i}.${this.AUDIO_FMT}`,
@@ -207,7 +239,7 @@ export class MoshhGenerator {
     // Pre-compute some variables
     moshhOptions = this.allOptions(moshhOptions);
     mediaOptions = MediaUtils.allOptions(mediaOptions);
-    const maxDuration = Math.max(...offsets.map(o => o[1]));
+    const totalDuration = Math.max(...offsets.map(o => o[1]));
     const subclips: string[] = [];
 
     // zip the paths weights and offsets
@@ -221,7 +253,7 @@ export class MoshhGenerator {
 
     try {
       let t = 0;
-      while (t < maxDuration) {
+      while (t < totalDuration) {
         // Determine which videos of the remaining videos fall within the current time range
         const activeIndices = this.updateActiveVideos(
           videoProcList.map(v => v.offset),
@@ -256,6 +288,14 @@ export class MoshhGenerator {
 
         // correct the offset to be local to the video, not global to the timeline
         const correctedT = t - activeVideo.offset[0];
+
+        // Update the status
+        this._handleStatus(
+          MoshhGeneratorStage.CompilingVideo,
+          (t / totalDuration) * 100,
+          `${Math.floor(t)} of ${Math.floor(totalDuration)} seconds...`,
+          moshhOptions.statusCallback,
+        );
 
         // Create the subclip
         const randId = _.random(1e6, false);
@@ -296,15 +336,6 @@ export class MoshhGenerator {
     }
   }
 
-  static async _handleStatus(
-    message: string,
-    status: MoshhGeneratorProgressStatus,
-    callback?: MoshhGeneratorProgressCallback | null,
-  ) {
-    console.log(message);
-    callback?.(status, message);
-  }
-
   static async generateMoshh(
     videoPaths: string[],
     weights: number[],
@@ -341,22 +372,30 @@ export class MoshhGenerator {
 
       // Extract the audios
       this._handleStatus(
-        'Extracting Audios',
-        MoshhGeneratorProgressStatus.ExtractingAudio,
+        MoshhGeneratorStage.ExtractingAudio,
+        0,
+        'Extracting audios...',
         moshhOptions.statusCallback,
       );
-      const audioRelPaths = await this.extractAudios(videoPaths);
+      const audioRelPaths = await this.extractAudios(
+        videoPaths,
+        moshhOptions.statusCallback,
+      );
       tmpFileRelPaths.concat(audioRelPaths);
 
       // Generate the constellations
-      this._handleStatus(
-        'generating constellations',
-        MoshhGeneratorProgressStatus.GeneratingConstellations,
-        moshhOptions.statusCallback,
-      );
       let constellations: ConstellationInfo[] = [];
       if (moshhOptions.preloadedConstellations!.length === 0) {
-        for (let path of audioRelPaths) {
+        for (let [idx, path] of audioRelPaths.entries()) {
+          // Set the status
+          this._handleStatus(
+            MoshhGeneratorStage.GeneratingConstellations,
+            (idx / audioRelPaths.length) * 100,
+            `Generating constellation ${idx + 1} of ${audioRelPaths.length}...`,
+            moshhOptions.statusCallback,
+          );
+
+          // Generate the constellation and add
           const constellation =
             await ConstellationManager.generateConstellation(
               this.#localFileStore!.absolutePath(path),
@@ -369,8 +408,9 @@ export class MoshhGenerator {
 
       // Get the global offsets
       this._handleStatus(
-        'calculating offsets',
-        MoshhGeneratorProgressStatus.CalculatingOffsets,
+        MoshhGeneratorStage.CalculatingOffsets,
+        0,
+        'Calculating offsets...',
         moshhOptions.statusCallback,
       );
       const durations = mediaInfos.map(info => Number(info.getDuration()));
@@ -383,8 +423,9 @@ export class MoshhGenerator {
 
       // Compile the videos
       this._handleStatus(
-        'compiling video',
-        MoshhGeneratorProgressStatus.CompilingVideo,
+        MoshhGeneratorStage.CompilingVideo,
+        0,
+        'compiling videos...',
         moshhOptions.statusCallback,
       );
       const startTime = Date.now();
@@ -407,17 +448,22 @@ export class MoshhGenerator {
 
       // Fade the audios
       this._handleStatus(
-        'fading audios',
-        MoshhGeneratorProgressStatus.FadingAudios,
+        MoshhGeneratorStage.FadingAudios,
+        0,
+        'Fading audios...',
         moshhOptions.statusCallback,
       );
-      const fadedPaths = await this.fadeAudios(audioRelPaths);
+      const fadedPaths = await this.fadeAudios(
+        audioRelPaths,
+        moshhOptions.statusCallback,
+      );
       tmpFileRelPaths.concat(fadedPaths);
 
       // Merge the audio files
       this._handleStatus(
-        'Merging Audio Files',
-        MoshhGeneratorProgressStatus.MergingAudios,
+        MoshhGeneratorStage.MergingAudios,
+        0,
+        'Merging audio files...',
         moshhOptions.statusCallback,
       );
       const mergedAudioRelPath = this.getTmpRelativePath(
@@ -443,8 +489,9 @@ export class MoshhGenerator {
 
       // Overlay the audio files
       this._handleStatus(
-        'overlaying audios',
-        MoshhGeneratorProgressStatus.OverlayingAudios,
+        MoshhGeneratorStage.OverlayingAudios,
+        0,
+        'Overlaying audio...',
         moshhOptions.statusCallback,
       );
       await assertMediaUtil(
@@ -459,19 +506,21 @@ export class MoshhGenerator {
       console.log('Got an error generating moshh', err);
     } finally {
       // Delete any tmp files that were created
-      this._handleStatus(
-        'cleaning up tmp files',
-        MoshhGeneratorProgressStatus.CleaningUp,
-        moshhOptions.statusCallback,
-      );
-      for (let p of tmpFileRelPaths) {
+      for (let [idx, p] of tmpFileRelPaths.entries()) {
+        this._handleStatus(
+          MoshhGeneratorStage.CleaningUp,
+          (idx / tmpFileRelPaths.length) * 100,
+          `Cleaning up tmp file ${idx + 1} of ${tmpFileRelPaths.length}...`,
+          moshhOptions.statusCallback,
+        );
         this.#localFileStore?.deleteFile(p);
       }
 
       // Indicate the process is done
       this._handleStatus(
-        'finished',
-        MoshhGeneratorProgressStatus.Finished,
+        MoshhGeneratorStage.Finished,
+        100,
+        'Finished.',
         moshhOptions.statusCallback,
       );
     }
