@@ -28,10 +28,12 @@ class VideoPlayer extends React.Component<VideoPlayerProps, StateType> {
   playButtonClicked() {
     // Control the video (note, the state hasn't been toggled yet
     // so it represents the current state, not future)
-    if (this.state.playState) {
-      this.pause();
-    } else {
-      this.start();
+    if (this.props.source) {
+      if (this.state.playState) {
+        this.pause();
+      } else {
+        this.start();
+      }
     }
   }
 

@@ -13,7 +13,7 @@ import {
   VideoPlayer,
 } from '../../components';
 import {fetchVideoInfo} from './utils';
-import TimelineCanvas from './TimelineCanvas';
+import {TimelineCanvas} from './components';
 import {MoshhVideoInfo} from './types';
 import {
   MoshhGenerator,
@@ -33,12 +33,20 @@ const MoshhGeneratorScreen = () => {
     useState<_MoshhStatus | null>(null);
   const [chooseFileSource, setChooseFileSource] = useState(false);
   const [inputs, setInputs] = useState<string[]>([]);
-  const [videoPreview, setVideoPreview] = useState<string | undefined>(
-    undefined,
-  );
   const inputInfoMapRef = useRef<Map<string, MoshhVideoInfo>>(
     new Map<string, MoshhVideoInfo>(),
   );
+  const [output, setOutput] = useState<MoshhVideoInfo | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | undefined>(
+    undefined,
+  );
+
+  const clearProjectContents = () => {
+    inputInfoMapRef.current.clear();
+    setInputs([]);
+    setOutput(null);
+    setVideoPreview(undefined);
+  };
 
   const onFileSystemSelected = async () => {
     setChooseFileSource(false);
@@ -86,9 +94,45 @@ const MoshhGeneratorScreen = () => {
     setIsLoadingInputs(false);
   };
 
+  const onResetProject = () => {
+    Alert.alert(
+      'Clear project contents',
+      'Are you sure you want to clear the project contents?',
+      [
+        {
+          text: 'Yes',
+          onPress: () => {
+            clearProjectContents();
+          },
+          style: 'destructive',
+        },
+        {
+          text: 'Cancel',
+        },
+      ],
+    );
+  };
+
   const removeVideo = (videoInfo: MoshhVideoInfo) => {
+    // If playing the video, clear it
+    if (videoInfo.path === videoPreview) {
+      setVideoPreview(undefined);
+    }
+
+    // Remove from inputs
     setInputs(current => current.filter(val => val !== videoInfo.path));
     inputInfoMapRef.current.delete(videoInfo.path);
+  };
+
+  const setWeight = (videoInfo: MoshhVideoInfo, newWeight: number) => {
+    const infoRef = inputInfoMapRef.current.get(videoInfo.path);
+    if (infoRef) {
+      infoRef.weight = newWeight;
+      inputInfoMapRef.current = inputInfoMapRef.current.set(
+        videoInfo.path,
+        infoRef,
+      );
+    }
   };
 
   const onMoshhGeneratorStatus = (
@@ -102,7 +146,7 @@ const MoshhGeneratorScreen = () => {
     });
   };
 
-  const onGenerateMoshhPressed = async () => {
+  const runMoshhGenerator = async () => {
     const weights = Array<number>(inputs.length).fill(1);
 
     setGeneratingMoshhStatus({
@@ -146,14 +190,18 @@ const MoshhGeneratorScreen = () => {
         // Move to the gallery
         setGeneratingMoshhStatus({
           progress: 0,
-          status: 'Saving to gallery..',
+          status: 'Saving to gallery...',
         });
         await CameraRoll.save(outputPath, {type: 'video'});
 
-        // Delete the tmp file
+        // Generate the thumbnail and video info
+        setGeneratingMoshhStatus({
+          progress: 0,
+          status: 'Generating thumbnail...',
+        });
+        setOutput(await fetchVideoInfo(outputPath));
 
         // Update the message to show elapsed time
-
         Alert.alert('Success!', 'Moshh created, find it in the gallery');
       }
     } catch (err) {
@@ -161,6 +209,22 @@ const MoshhGeneratorScreen = () => {
     } finally {
       setGeneratingMoshhStatus(null);
     }
+  };
+
+  const onGenerateMoshhPressed = () => {
+    Alert.alert(
+      'Generate Moshh',
+      'Are you sure you want to run the moshh generator? This process takes a few minutes...',
+      [
+        {
+          text: 'Yes',
+          onPress: () => runMoshhGenerator(),
+        },
+        {
+          text: 'No',
+        },
+      ],
+    );
   };
 
   const timelineInputs = inputs.map(path => inputInfoMapRef.current.get(path)!);
@@ -184,6 +248,13 @@ const MoshhGeneratorScreen = () => {
       </View>
       <View style={styles.inputContainer}>
         <View style={styles.timelineButtonsContainer}>
+          <Button
+            mode="text"
+            disabled={inputs.length === 0}
+            onPress={onResetProject}
+            labelStyle={styles.timelineButtons}>
+            Clear
+          </Button>
           <IconButton
             icon="plus-box"
             onPress={() => onGallerySelected()}
@@ -194,8 +265,12 @@ const MoshhGeneratorScreen = () => {
         <View style={styles.timelineContainer}>
           <TimelineCanvas
             videoInfoList={timelineInputs}
+            videoOutput={output}
             onVideoPressed={vidInfo => setVideoPreview(vidInfo.path)}
             onVideoRemove={vidInfo => removeVideo(vidInfo)}
+            onWeightChanged={(vidInfo, newWeight) =>
+              setWeight(vidInfo, newWeight)
+            }
           />
         </View>
       </View>
@@ -230,9 +305,13 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   timelineButtonsContainer: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     width: '100%',
-    alignItems: 'flex-end',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  timelineButtons: {
+    fontSize: 20,
   },
   timelineContainer: {
     flex: 1,
