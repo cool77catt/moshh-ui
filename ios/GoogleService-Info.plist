@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>371885176212-9q2snefs9bt1fpbck5i25pk1er7lhgc5.apps.googleusercontent.com</string>
+	<string></string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.371885176212-9q2snefs9bt1fpbck5i25pk1er7lhgc5</string>
+	<string></string>
 	<key>API_KEY</key>
-	<string>AIzaSyAOFlFQE7cR71ZyFbyaNZppjJw5dRIz6Rw</string>
+	<string></string>
 	<key>GCM_SENDER_ID</key>
 	<string>371885176212</string>
 	<key>PLIST_VERSION</key>
